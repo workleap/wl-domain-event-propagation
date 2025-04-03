@@ -122,6 +122,38 @@ internal sealed class InMemoryActivityTracker : IDisposable
         }
     }
 
+    public void AssertCloudEventsTagsSet(string activityName)
+    {
+        lock (this._activitiesLock)
+        {
+            Assert.Contains(this._activities, activity => activity.OperationName == activityName);
+            Assert.All(
+                this._activities.Where(activity => activity.OperationName == activityName),
+                activity =>
+                {
+                    Assert.NotNull(activity.GetTagItem(TracingHelper.CloudEventsIdTag));
+                    Assert.NotNull(activity.GetTagItem(TracingHelper.CloudEventsSourceTag));
+                    Assert.NotNull(activity.GetTagItem(TracingHelper.CloudEventsTypeTag));
+                });
+        }
+    }
+
+    public void AssertEventgridEventsTagsSet(string activityName)
+    {
+        lock (this._activitiesLock)
+        {
+            Assert.Contains(this._activities, activity => activity.OperationName == activityName);
+            Assert.All(
+                this._activities.Where(activity => activity.OperationName == activityName),
+                activity =>
+                {
+                    Assert.NotNull(activity.GetTagItem(TracingHelper.EventgridEventsIdTag));
+                    Assert.NotNull(activity.GetTagItem(TracingHelper.EventgridEventsSourceTag));
+                    Assert.NotNull(activity.GetTagItem(TracingHelper.EventgridEventsTypeTag));
+                });
+        }
+    }
+
     public void AssertNoSubscribeActivity()
     {
         lock (this._activitiesLock)

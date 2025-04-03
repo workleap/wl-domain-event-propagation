@@ -5,17 +5,14 @@ namespace Workleap.DomainEventPropagation;
 
 internal sealed class CloudEventHandler : BaseEventHandler, ICloudEventHandler
 {
-    private readonly ILogger<ICloudEventHandler> _logger;
     private readonly DomainEventHandlerDelegate _pipeline;
 
     public CloudEventHandler(
         IServiceProvider serviceProvider,
         IDomainEventTypeRegistry domainEventTypeRegistry,
-        IEnumerable<ISubscriptionDomainEventBehavior> domainEventBehaviors,
-        ILogger<ICloudEventHandler> logger)
+        IEnumerable<ISubscriptionDomainEventBehavior> domainEventBehaviors)
         : base(serviceProvider, domainEventTypeRegistry)
     {
-        this._logger = logger;
         this._pipeline = domainEventBehaviors.Reverse().Aggregate((DomainEventHandlerDelegate)this.HandleDomainEventAsync, BuildPipeline);
     }
 

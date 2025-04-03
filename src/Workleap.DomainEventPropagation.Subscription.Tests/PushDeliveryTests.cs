@@ -48,11 +48,13 @@ public class PushDeliveryTests(ITestOutputHelper testOutputHelper)
         var processedEvent = await eventGridChannel.Reader.ReadAsync(cts.Token);
         Assert.Equal(EventGridId, processedEvent.Id);
         activityTracker.AssertSubscribeSuccessful("EventGridEvents process com.workleap.sample.testEventGridEvent");
+        activityTracker.AssertEventgridEventsTagsSet("EventGridEvents process com.workleap.sample.testEventGridEvent");
 
         var cloudChannel = host.Services.GetRequiredService<Channel<TestCloudEvent>>();
         var processedCloudEvent = await cloudChannel.Reader.ReadAsync(cts.Token);
         Assert.Equal(CloudEventId, processedCloudEvent.Id);
         activityTracker.AssertSubscribeSuccessful("CloudEvents process com.workleap.sample.testCloudEvent");
+        activityTracker.AssertCloudEventsTagsSet("CloudEvents process com.workleap.sample.testCloudEvent");
 
         // Terminate the service
         host.Services.GetRequiredService<IHostApplicationLifetime>().StopApplication();

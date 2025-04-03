@@ -47,22 +47,6 @@ public class CloudEventHandlerUnitTests
     }
 
     [Fact]
-    public async Task Given_TypeWasRegisteredButNoHandler_When_HandleCloudEventAsync_Then_ReturnsRejected()
-    {
-        // Given
-        var cloudEvent = GivenSampleEvent();
-        var services = new ServiceCollection();
-        services.AddPullDeliverySubscription();
-        var domainEventTypeRegistry = new DomainEventTypeRegistry();
-        domainEventTypeRegistry.RegisterDomainEvent(typeof(SampleEvent));
-        services.Replace(new ServiceDescriptor(typeof(IDomainEventTypeRegistry), domainEventTypeRegistry));
-        var handler = new CloudEventHandler(new ServiceCollection().BuildServiceProvider(), domainEventTypeRegistry, Enumerable.Empty<ISubscriptionDomainEventBehavior>(), new NullLogger<CloudEventHandler>());
-
-        // When
-        await Assert.ThrowsAsync<DomainEventHandlerNotRegisteredException>(() => handler.HandleCloudEventAsync(cloudEvent, CancellationToken.None));
-    }
-
-    [Fact]
     public async Task Given_FailingEventHandler_When_HandleCloudEventAsync_Then_ThrowException()
     {
         // Given

@@ -53,6 +53,8 @@ public class PullDeliveryTests(ITestOutputHelper testOutputHelper)
 
         activityTracker.AssertSubscribeSuccessful("CloudEvents process com.workleap.sample.testEvent1");
         activityTracker.AssertSubscribeSuccessful("CloudEvents process com.workleap.sample.testEvent2");
+        activityTracker.AssertCloudEventsTagsSet("CloudEvents process com.workleap.sample.testEvent1");
+        activityTracker.AssertCloudEventsTagsSet("CloudEvents process com.workleap.sample.testEvent2");
 
         // Terminate the service
         host.Services.GetRequiredService<IHostApplicationLifetime>().StopApplication();

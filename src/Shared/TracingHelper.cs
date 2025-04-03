@@ -23,6 +23,15 @@ internal static class TracingHelper
     internal const string CloudEventsPublisherActivityType = "CloudEvents create";
     internal const string CloudEventsSubscriberActivityType = "CloudEvents process";
 
+    // https://github.com/open-telemetry/semantic-conventions/blob/0d80f21f77447edc97b12350ebe8bf2b2c5582ae/docs/cloudevents/cloudevents-spans.md
+    internal const string CloudEventsIdTag = "cloudevents.event_id";
+    internal const string CloudEventsSourceTag = "cloudevents.event_source";
+    internal const string CloudEventsTypeTag = "cloudevents.event_type";
+
+    internal const string EventgridEventsIdTag = "eventgridevents.event_id";
+    internal const string EventgridEventsSourceTag = "eventgridevents.event_source";
+    internal const string EventgridEventsTypeTag = "eventgridevents.event_type";
+
     private static readonly Assembly Assembly = typeof(TracingHelper).Assembly;
     private static readonly AssemblyName AssemblyName = Assembly.GetName();
     private static readonly string AssemblyVersion = Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? AssemblyName.Version!.ToString();

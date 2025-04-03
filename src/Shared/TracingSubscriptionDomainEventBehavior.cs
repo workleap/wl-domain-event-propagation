@@ -29,13 +29,14 @@ internal sealed class TracingSubscriptionDomainEventBehavior : ISubscriptionDoma
 
     private static IEnumerable<string> ExtractActivityProperties(DomainEventWrapper domainEventWrapper, string key)
     {
-        return domainEventWrapper.TryGetMetadata(key, out var value) ? new[] { value! } : Enumerable.Empty<string>();
+        return domainEventWrapper.TryGetMetadata(key, out var value) ? [value!] : [];
     }
 
     private static async Task HandleWithTracing(DomainEventWrapper domainEventWrapper, DomainEventHandlerDelegate next, Activity activity, CancellationToken cancellationToken)
     {
         try
         {
+            AddEventActivityTags(activity, domainEventWrapper);
             await next(domainEventWrapper, cancellationToken).ConfigureAwait(false);
 
             TracingHelper.MarkAsSuccessful(activity);
@@ -53,4 +54,23 @@ internal sealed class TracingSubscriptionDomainEventBehavior : ISubscriptionDoma
         EventSchema.CloudEvent => TracingHelper.GetCloudEventsSubscriberActivityName(domainEventWrappers.DomainEventName),
         _ => TracingHelper.GetEventGridEventsSubscriberActivityName(domainEventWrappers.DomainEventName),
     };
+
+    private static void AddEventActivityTags(Activity activity, DomainEventWrapper domainEventWrapper)
+    {
+        switch (domainEventWrapper.DomainEventSchema)
+        {
+            case EventSchema.CloudEvent:
+                activity.AddTag(TracingHelper.CloudEventsIdTag, domainEventWrapper.Id);
+                activity.AddTag(TracingHelper.CloudEventsSourceTag, domainEventWrapper.Source);
+                activity.AddTag(TracingHelper.CloudEventsTypeTag, domainEventWrapper.DomainEventName);
+                break;
+            case EventSchema.EventGridEvent:
+                activity.AddTag(TracingHelper.EventgridEventsIdTag, domainEventWrapper.Id);
+                activity.AddTag(TracingHelper.EventgridEventsSourceTag, domainEventWrapper.Source);
+                activity.AddTag(TracingHelper.EventgridEventsTypeTag, domainEventWrapper.DomainEventName);
+                break;
+            default:
+                return;
+        }
+    }
 }

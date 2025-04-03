@@ -300,10 +300,18 @@ It can be configured by setting the `MaxRetries` property in the `EventGridSubsc
 You can use the [named options pattern](https://learn.microsoft.com/en-us/dotnet/core/extensions/options#named-options-support-using-iconfigurenamedoptions) to configure the behavior of the underlying Event Grid clients. For instance:
 
 ```csharp
+// Configure options when using EventGridEvents
 services.Configure<EventGridPublisherClientOptions>(EventPropagationPublisherOptions.EventGridClientName, options =>
 {
     options.Retry.NetworkTimeout = TimeSpan.FromSeconds(15);
 });
+
+// Configure options when using CloudEvents
+services.Configure<EventGridSenderClientOptions>(EventPropagationPublisherOptions.EventGridClientName, options =>
+{
+    options.Retry.NetworkTimeout = TimeSpan.FromSeconds(15);
+});
+
 ```
 
 ## Additional notes
