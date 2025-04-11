@@ -54,6 +54,7 @@ public sealed class EventDomainAttributeUsageAnalyzer : DiagnosticAnalyzer
         if (analyzer.IsValid)
         {
             context.RegisterSymbolAction(analyzer.AnalyzeOperationInvocation, SymbolKind.NamedType);
+            context.RegisterCompilationEndAction(analyzer.CompilationEnd);
         }
     }
 
@@ -62,7 +63,7 @@ public sealed class EventDomainAttributeUsageAnalyzer : DiagnosticAnalyzer
         private static readonly HashSet<string> AllowedProductNames = ["workleap", "officevibe", "lms", "skills", "onboarding", "sharegate"];
         private readonly INamedTypeSymbol? _domainEventInterfaceType;
         private readonly INamedTypeSymbol? _domainEventAttributeType;
-        private readonly ConcurrentDictionary<string, bool> _existingAttributes = new ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, List<INamedTypeSymbol>> _existingAttributes = new ConcurrentDictionary<string, List<INamedTypeSymbol>>(StringComparer.OrdinalIgnoreCase);
 
         public AnalyzerImplementation(Compilation compilation)
         {
@@ -95,11 +96,10 @@ public sealed class EventDomainAttributeUsageAnalyzer : DiagnosticAnalyzer
                         var attributeArgument = domainEventAttribute.ConstructorArguments[0].Value;
                         if (attributeArgument is string attributeArgumentString)
                         {
-                            var wasAdded = this._existingAttributes.TryAdd(attributeArgumentString, true);
-
-                            if (!wasAdded)
+                            var list = this._existingAttributes.GetOrAdd(attributeArgumentString, _ => new());
+                            lock (list)
                             {
-                                context.ReportDiagnostic(UseUniqueNameAttribute, classTypeSymbol);
+                                list.Add(classTypeSymbol);
                             }
 
                             ValidateEventNameConvention(context, attributeArgumentString, domainEventAttribute, classTypeSymbol);
@@ -175,6 +175,27 @@ public sealed class EventDomainAttributeUsageAnalyzer : DiagnosticAnalyzer
         private bool ImplementsBaseDomainEventInterface(ITypeSymbol type)
         {
             return type.AllInterfaces.Any(x => SymbolEqualityComparer.Default.Equals(x, this._domainEventInterfaceType));
+        }
+
+        internal void CompilationEnd(CompilationAnalysisContext context)
+        {
+            foreach (var kvp in this._existingAttributes)
+            {
+                if (kvp.Value.Count > 1)
+                {
+                    foreach (var symbol in kvp.Value)
+                    {
+                        if (symbol.DeclaringSyntaxReferences.Length == 0)
+                        {
+                            continue;
+                        }
+
+                        var location = symbol.Locations[0];
+                        var additionalLocations = symbol.Locations.Skip(1);
+                        context.ReportDiagnostic(Diagnostic.Create(UseUniqueNameAttribute, location, additionalLocations));
+                    }
+                }
+            }
         }
     }
 }

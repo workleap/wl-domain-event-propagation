@@ -9,6 +9,7 @@ using Workleap.DomainEventPropagation.Tests;
 
 namespace Workleap.DomainEventPropagation.Subscription.Tests;
 
+[Collection("Telemetry")]
 public class PushDeliveryTests(ITestOutputHelper testOutputHelper)
 {
     private const int EmulatorPort = 6500;
