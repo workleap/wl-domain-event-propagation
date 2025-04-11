@@ -93,7 +93,7 @@ public class SampleDomainEvent : IDomainEvent
     {
         const string source = """
 [DomainEvent("com.workleap.domainservice.created")]
-public class SampleDomainEvent : IDomainEvent
+public class {|WLDEP02:SampleDomainEvent|} : IDomainEvent
 {    
 }
 [DomainEvent("com.workleap.domainservice.created")]
