@@ -17,7 +17,7 @@
     <PackageReference Include="CliWrap" Version="3.8.2" />
     <PackageReference Include="FakeItEasy" Version="8.3.0" />
     <PackageReference Include="GSoft.Extensions.Xunit" Version="1.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.14" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.15" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageReference Include="OpenTelemetry" Version="1.11.2" />
     <PackageReference Include="Testcontainers" Version="4.3.0" />
