@@ -101,17 +101,9 @@ public class {|WLDEP02:SampleDomainEvent2|} : IDomainEvent
 {    
 }
 """;
-
-        // Retrying this test to ensure expected diagnostic by line numbers.
-        // We don't know exactly which of the above defined "source" will get
-        // executed by analyzer first because of the concurrent execution.
-        var retryPolicy = Policy.Handle<Exception>().RetryAsync(10);
-        await retryPolicy.ExecuteAsync(async () =>
-        {
-            await new BaseAnalyzerTest<EventDomainAttributeUsageAnalyzer>()
-                .WithSourceCode(source)
-                .RunAsync();
-        });
+        await new BaseAnalyzerTest<EventDomainAttributeUsageAnalyzer>()
+            .WithSourceCode(source)
+            .RunAsync();
     }
 
     [Fact]
