@@ -127,6 +127,89 @@ public class EventPullerServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GivenPullInterval_WhenRunning_ThenDelayIsRespectedBetweenPulls()
+    {
+        // Given
+        var pullInterval = TimeSpan.FromMilliseconds(200);
+        var timestamps = new List<DateTime>();
+
+        var options = GenerateOptions(
+            maxRetries: 3
+        );
+        options.PullInterval = pullInterval;
+        options.MaxPullBatchSize = 1; // Ensure we pull multiple times
+
+        var client = this.GivenClient(options: options);
+
+
+        this.GivenEventsForClient(client, GenerateEvent(), GenerateEvent());
+
+        A.CallTo(() => client.Client.ReceiveCloudEventsAsync(
+                client.Options.TopicName,
+                client.Options.SubscriptionName,
+                A<int>._,
+                A<CancellationToken>._))
+            .Invokes(() => timestamps.Add(DateTime.UtcNow))
+            .ReturnsNextFromSequence(
+                [GenerateEvent()],
+                [GenerateEvent()],
+                [] // Stop condition
+            );
+
+        // When
+        await this.WhenRunningPullerService();
+
+        // Then
+        Assert.True(timestamps.Count >= 2, "Expected at least two pull calls.");
+
+        var actualInterval = timestamps[1] - timestamps[0];
+        Assert.True(actualInterval >= pullInterval,
+            $"Expected interval of at least {pullInterval}, but was {actualInterval}");
+    }
+
+    [Fact]
+    public async Task GivenMaxPullBatchSize_WhenRunning_ThenBatchSizeIsRespectedInReceiveCall()
+    {
+        // Given
+        const int batchSize = 3;
+
+        var client = this.GivenClient(options: new EventPropagationSubscriptionOptions
+        {
+            MaxDegreeOfParallelism = 10, // simulate more capacity
+            MaxPullBatchSize = batchSize
+        });
+
+        this.GivenEventsForClient(client, GenerateEvent(), GenerateEvent());
+
+        var receivedBatchSizes = new List<int>();
+
+        A.CallTo(() => client.Client.ReceiveCloudEventsAsync(
+                client.Options.TopicName,
+                client.Options.SubscriptionName,
+                A<int>._,
+                A<CancellationToken>._))
+            .Invokes((string _, string _, int maxEvents, CancellationToken _) =>
+            {
+                receivedBatchSizes.Add(maxEvents);
+            })
+            .ReturnsNextFromSequence(
+                [GenerateEvent()],
+                [] // Stop condition
+            );
+
+        // Act
+        await this.WhenRunningPullerService();
+
+        // Assert
+        Assert.True(receivedBatchSizes.Count >= 1, "Expected at least one call to ReceiveCloudEventsAsync.");
+
+        foreach (var requestedSize in receivedBatchSizes)
+        {
+            Assert.Equal(batchSize, requestedSize);
+        }
+    }
+
+    [Fact]
     public async Task GivenTwoEventsReceived_WhenHandleThrowUnhandledException_ThenEventsAreReleased()
     {
         // Given

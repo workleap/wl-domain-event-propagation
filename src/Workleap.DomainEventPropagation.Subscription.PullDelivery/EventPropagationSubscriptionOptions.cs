@@ -24,4 +24,14 @@ public class EventPropagationSubscriptionOptions
     public int MaxRetries { get; set; } = 3;
 
     public IReadOnlyCollection<TimeSpan>? RetryDelays { get; set; }
+
+    /// <summary>
+    /// Maximum number of events to pull from Event Grid per poll.
+    /// </summary>
+    public int MaxPullBatchSize { get; set; } = 100;
+
+    /// <summary>
+    /// Interval to wait between polling for new events.
+    /// </summary>
+    public TimeSpan PullInterval { get; set; } = TimeSpan.Zero;
 }

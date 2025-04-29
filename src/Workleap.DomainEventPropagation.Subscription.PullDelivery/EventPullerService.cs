@@ -29,7 +29,9 @@ internal sealed class EventPullerService : BackgroundService
                         optionsMonitor.Get(descriptor.Name).MaxDegreeOfParallelism,
                         optionsMonitor.Get(descriptor.Name).MaxRetries,
                         optionsMonitor.Get(descriptor.Name).RetryDelays?.ToList(),
-                        eventGridClientWrapperFactory.CreateClient(descriptor.Name)),
+                        eventGridClientWrapperFactory.CreateClient(descriptor.Name),
+                        optionsMonitor.Get(descriptor.Name).MaxPullBatchSize,
+                        optionsMonitor.Get(descriptor.Name).PullInterval),
                     serviceScopeFactory,
                     logger))
             .ToList();
@@ -71,7 +73,6 @@ internal sealed class EventPullerService : BackgroundService
         private static readonly TimeSpan[] SupportedReleaseDelays = [TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(600), TimeSpan.FromSeconds(3600)];
 
         private const int OutputChannelSize = 5000;
-        private const int MaxEventRequestSize = 100;
 
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly ILogger<EventPullerService> _logger;
@@ -166,12 +167,16 @@ internal sealed class EventPullerService : BackgroundService
                     continue;
                 }
 
-                var bundles = await this._eventGridTopicSubscription.Client.ReceiveCloudEventsAsync(this._eventGridTopicSubscription.TopicName, this._eventGridTopicSubscription.SubscriptionName, Math.Min(availableHandlers, MaxEventRequestSize), cancellationToken).ConfigureAwait(false);
+                var maxBatchSize = Math.Min(availableHandlers, this._eventGridTopicSubscription.MaxPullBatchSize);
+
+                var bundles = await this._eventGridTopicSubscription.Client.ReceiveCloudEventsAsync(this._eventGridTopicSubscription.TopicName, this._eventGridTopicSubscription.SubscriptionName, maxBatchSize, cancellationToken).ConfigureAwait(false);
 
                 foreach (var bundle in bundles)
                 {
                     yield return bundle;
                 }
+
+                await Task.Delay(this._eventGridTopicSubscription.PullInterval, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -197,7 +202,7 @@ internal sealed class EventPullerService : BackgroundService
                         await this._rejectEventChannel.Writer.WriteAsync(eventBundle, cancellationToken).ConfigureAwait(false);
                         break;
                     default:
-                        this._logger.EventWillBeReleased(eventBundle.Event.Id, eventBundle.Event.Type, ex!);
+                        this._logger.EventWillBeReleased(eventBundle.Event.Id, eventBundle.Event.Type, ex);
                         await this._releaseEventChannel.Writer.WriteAsync(eventBundle, cancellationToken).ConfigureAwait(false);
                         break;
                 }
@@ -210,7 +215,7 @@ internal sealed class EventPullerService : BackgroundService
             {
                 await this._acknowledgeEventChannel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false);
 
-                var lockTokens = ReadCurrentContent(this._acknowledgeEventChannel).Select(x => x.LockToken);
+                var lockTokens = ReadCurrentContent(this._acknowledgeEventChannel, this._eventGridTopicSubscription.MaxPullBatchSize).Select(x => x.LockToken);
                 await this._eventGridTopicSubscription.Client.AcknowledgeCloudEventsAsync(this._eventGridTopicSubscription.TopicName, this._eventGridTopicSubscription.SubscriptionName, lockTokens, cancellationToken).ConfigureAwait(false);
             }
         }
@@ -221,7 +226,7 @@ internal sealed class EventPullerService : BackgroundService
             {
                 await this._releaseEventChannel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false);
 
-                var eventBundlesByDelay = ReadCurrentContent(this._releaseEventChannel)
+                var eventBundlesByDelay = ReadCurrentContent(this._releaseEventChannel, this._eventGridTopicSubscription.MaxPullBatchSize)
                     .GroupBy(x => this.GetReleaseDelay(x.DeliveryCount));
 
                 foreach (var eventBundle in eventBundlesByDelay)
@@ -238,7 +243,7 @@ internal sealed class EventPullerService : BackgroundService
             {
                 await this._rejectEventChannel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false);
 
-                var lockTokens = ReadCurrentContent(this._rejectEventChannel).Select(x => x.LockToken);
+                var lockTokens = ReadCurrentContent(this._rejectEventChannel, this._eventGridTopicSubscription.MaxPullBatchSize).Select(x => x.LockToken);
                 await this._eventGridTopicSubscription.Client.RejectCloudEventsAsync(this._eventGridTopicSubscription.TopicName, this._eventGridTopicSubscription.SubscriptionName, lockTokens, cancellationToken).ConfigureAwait(false);
             }
         }
@@ -284,9 +289,9 @@ internal sealed class EventPullerService : BackgroundService
             return SupportedReleaseDelays.FirstOrDefault(x => delay <= x, SupportedReleaseDelays.Last());
         }
 
-        private static IEnumerable<EventBundle> ReadCurrentContent(Channel<EventBundle> channel)
+        private static IEnumerable<EventBundle> ReadCurrentContent(Channel<EventBundle> channel, int maxPullBatchSize)
         {
-            var maxResultCount = Math.Min(channel.Reader.Count, MaxEventRequestSize);
+            var maxResultCount = Math.Min(channel.Reader.Count, maxPullBatchSize);
             var resultCounter = 0;
 
             while (channel.Reader.TryRead(out var result))
@@ -301,5 +306,14 @@ internal sealed class EventPullerService : BackgroundService
         }
     }
 
-    private record EventGridTopicSubscription(string TopicName, string SubscriptionName, int MaxHandlerDop, int MaxRetriesCount, List<TimeSpan>? RetryDelays, IEventGridClientAdapter Client);
+    private record EventGridTopicSubscription(
+        string TopicName,
+        string SubscriptionName,
+        int MaxHandlerDop,
+        int MaxRetriesCount,
+        List<TimeSpan>? RetryDelays,
+        IEventGridClientAdapter Client,
+        int MaxPullBatchSize,
+        TimeSpan PullInterval
+    );
 }
