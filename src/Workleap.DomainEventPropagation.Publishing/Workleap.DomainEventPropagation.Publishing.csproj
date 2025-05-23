@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Messaging.EventGrid" Version="4.30.0" />
+    <PackageReference Include="Azure.Messaging.EventGrid" Version="4.31.0" />
     <PackageReference Include="Azure.Messaging.EventGrid.Namespaces" Version="1.1.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4">
       <PrivateAssets>all</PrivateAssets>
