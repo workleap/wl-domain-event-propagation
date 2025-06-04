@@ -1,14 +1,17 @@
 ﻿using System.Threading.RateLimiting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Workleap.DomainEventPropagation;
 
 internal class ThrottlingDomainEventBehavior : ISubscriptionDomainEventBehavior
 {
+    private readonly ILogger<ThrottlingDomainEventBehavior> _logger;
     private readonly RateLimiter _rateLimiter;
 
-    internal ThrottlingDomainEventBehavior(IOptions<EventPropagationThrottlingOptions> options)
+    internal ThrottlingDomainEventBehavior(IOptions<EventPropagationThrottlingOptions> options, ILogger<ThrottlingDomainEventBehavior> logger)
     {
+        this._logger = logger;
         this._rateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
         {
             TokenLimit = options.Value.MaxEventsPerSecond,
@@ -30,6 +33,8 @@ internal class ThrottlingDomainEventBehavior : ISubscriptionDomainEventBehavior
         }
         else
         {
+            this._logger.LogWarning("Throttling event {EventName} due to rate limiting.", domainEvent.DomainEventName);
+
             throw new ThrottlingException();
         }
     }
