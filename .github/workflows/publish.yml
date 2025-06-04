@@ -2,18 +2,34 @@ name: Publish
 
 on:
   push:
-    branches: ["main", "master"]
+    branches: ["main"]
     tags: ["*.*.*"]
     paths-ignore: ["*.md"]
 
+# We are using OpenID Connect to authenticate with Azure with secret.
+# https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-azure
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, idp]
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      
+      - name: Get nuget-org-workleap-api-key secret
+        id: get_nuget_org_workleap_api_key_secret
+        uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
+        with:
+          azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
+          secret-name: "nuget-org-workleap-api-key"
 
       - uses: actions/setup-dotnet@v4
 
@@ -21,15 +37,17 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      - run: ./Build.ps1
+      - run: ./Build.ps1 -SkipTests
         shell: pwsh
         env:
           NUGET_SOURCE: ${{ secrets.NUGET_SOURCE }}
-          NUGET_API_KEY: ${{ secrets.WORKLEAP_NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.get_nuget_org_workleap_api_key_secret.outputs.secret }}
 
   linearb:
     needs: [publish]
     uses: workleap/wl-reusable-workflows/.github/workflows/linearb-deployment.yml@main
     with:
       environment: 'release'
-    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read

@@ -10,6 +10,7 @@ using Workleap.DomainEventPropagation.Tests;
 
 namespace Workleap.DomainEventPropagation.Subscription.PullDelivery.Tests;
 
+[Collection("Telemetry")]
 public class PullDeliveryTests(ITestOutputHelper testOutputHelper)
 {
     private const int EmulatorPort = 6500;
@@ -235,7 +236,7 @@ public class PullDeliveryTests(ITestOutputHelper testOutputHelper)
         private static IContainer BuildContainer(string configurationPath)
         {
             return new ContainerBuilder()
-                .WithImage("workleap/eventgridemulator:0.6.0")
+                .WithImage("workleap/eventgridemulator:0.6.9")
                 .WithPortBinding(EmulatorPort, assignRandomHostPort: true)
                 .WithBindMount(configurationPath, "/app/appsettings.json", AccessMode.ReadOnly)
                 .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(EmulatorPort))
