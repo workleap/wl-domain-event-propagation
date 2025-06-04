@@ -101,6 +101,28 @@ public abstract class EventPropagationClientTests
         A.CallTo(() => publisherBehavior.HandleAsync(A<DomainEventWrapperCollection>._, A<DomainEventsHandlerDelegate>._, A<CancellationToken>._)).MustHaveHappened();
     }
 
+    [Fact]
+    public async Task GivenEnquedEvent_WhenTimeoutExpires_SendEvent()
+    {
+        // Given
+        var domainEvent = new TestEventGridEvent { Text = "Hello world", Number = 2 };
+        var publisherBehavior = A.Fake<IPublishingDomainEventBehavior>();
+
+        var propagationClient = new EventPropagationClient(
+            this.EventGridPublisherClientFactory,
+            this.EventGridClientFactory,
+            this._publisherOptions,
+            new[] { publisherBehavior });
+
+        // When
+        propagationClient.PublishAndQueueDomainEvent(domainEvent);
+
+        await Task.Delay(500);
+
+        // Then
+        A.CallTo(() => publisherBehavior.HandleAsync(A<DomainEventWrapperCollection>._, A<DomainEventsHandlerDelegate>._, A<CancellationToken>._)).MustHaveHappened();
+    }
+
     protected static bool IsSingleEventGridEvent(IEnumerable<EventGridEvent> events)
     {
         return events.Single() is

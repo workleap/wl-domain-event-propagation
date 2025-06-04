@@ -5,6 +5,8 @@ public interface IEventPropagationClient
     Task PublishDomainEventAsync<T>(T domainEvent, CancellationToken cancellationToken)
         where T : IDomainEvent;
 
+    void PublishAndQueueDomainEvent(IDomainEvent domainEvent);
+
     Task PublishDomainEventAsync<T>(T domainEvent, Action<IDomainEventMetadata> configureDomainEventMetadata, CancellationToken cancellationToken)
         where T : IDomainEvent;
 

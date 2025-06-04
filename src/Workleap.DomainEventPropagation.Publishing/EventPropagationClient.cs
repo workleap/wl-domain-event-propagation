@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Azure;
 using Azure.Messaging;
 using Azure.Messaging.EventGrid;
@@ -10,10 +11,16 @@ namespace Workleap.DomainEventPropagation;
 /// <summary>
 /// https://github.com/Azure/azure-sdk-for-net/blob/master/sdk/eventgrid/Azure.Messaging.EventGrid/README.md
 /// </summary>
-internal sealed class EventPropagationClient : IEventPropagationClient
+internal sealed class EventPropagationClient : IEventPropagationClient, IDisposable
 {
     private const int EventGridMaxEventsPerBatch = 1000;
+    private const int MaxQueueSize = 100;
     private const string DomainEventDefaultVersion = "1.0";
+
+    private readonly TimeSpan _flushInterval = TimeSpan.FromMilliseconds(200);
+    private readonly CancellationTokenSource _cts = new();
+    private readonly Task? _backgroundTask;
+    private readonly ConcurrentQueue<IDomainEvent> _domainEventQueue = new();
 
     private readonly EventPropagationPublisherOptions _eventPropagationPublisherOptions;
     private readonly DomainEventsHandlerDelegate _pipeline;
@@ -37,6 +44,7 @@ internal sealed class EventPropagationClient : IEventPropagationClient
         {
             case TopicType.Custom:
                 this._eventGridPublisherClient = eventGridPublisherClientFactory.CreateClient(EventPropagationPublisherOptions.EventGridClientName);
+                this._backgroundTask = Task.Run(this.ProcessQueueAsync);
                 break;
             case TopicType.Namespace:
                 this._eventGridNamespaceClient = eventGridClientFactory.CreateClient(EventPropagationPublisherOptions.EventGridClientName);
@@ -55,6 +63,8 @@ internal sealed class EventPropagationClient : IEventPropagationClient
         where T : IDomainEvent
         => this.InternalPublishDomainEventsAsync(new[] { domainEvent }, null, cancellationToken);
 
+    public void PublishAndQueueDomainEvent(IDomainEvent domainEvent) => this._domainEventQueue.Enqueue(domainEvent);
+
     public Task PublishDomainEventAsync<T>(T domainEvent, Action<IDomainEventMetadata> configureDomainEventMetadata, CancellationToken cancellationToken)
         where T : IDomainEvent
         => this.InternalPublishDomainEventsAsync(new[] { domainEvent }, configureDomainEventMetadata, cancellationToken);
@@ -66,6 +76,12 @@ internal sealed class EventPropagationClient : IEventPropagationClient
     public Task PublishDomainEventsAsync<T>(IEnumerable<T> domainEvents, Action<IDomainEventMetadata> configureDomainEventMetadata, CancellationToken cancellationToken)
         where T : IDomainEvent
         => this.InternalPublishDomainEventsAsync(domainEvents, configureDomainEventMetadata, cancellationToken);
+
+    public void Dispose()
+    {
+        this._cts.Cancel();
+        this._backgroundTask?.Wait();
+    }
 
     private async Task InternalPublishDomainEventsAsync<T>(IEnumerable<T> domainEvents, Action<IDomainEventMetadata>? configureDomainEventMetadata, CancellationToken cancellationToken)
         where T : IDomainEvent
@@ -186,6 +202,25 @@ internal sealed class EventPropagationClient : IEventPropagationClient
         if (chunk.Any())
         {
             yield return chunk;
+        }
+    }
+
+    private async Task ProcessQueueAsync()
+    {
+        while (!this._cts.Token.IsCancellationRequested)
+        {
+            await Task.Delay(this._flushInterval).ConfigureAwait(false);
+
+            var eventsToSend = new List<IDomainEvent>();
+            while (eventsToSend.Count < MaxQueueSize && this._domainEventQueue.TryDequeue(out var evt))
+            {
+                eventsToSend.Add(evt);
+            }
+
+            if (eventsToSend.Count > 0)
+            {
+                await this.InternalPublishDomainEventsAsync(eventsToSend, null, CancellationToken.None).ConfigureAwait(false);
+            }
         }
     }
 }

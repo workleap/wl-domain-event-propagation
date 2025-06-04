@@ -45,6 +45,12 @@
     <Compile Include="..\Shared\DomainEventWrapper.cs" Link="Shared\DomainEventWrapper.cs" />
     <Compile Include="..\Shared\ISubscriptionDomainEventBehavior.cs" Link="Shared\ISubscriptionDomainEventBehavior.cs"/>
     <Compile Include="..\Shared\JsonSerializerConstants.cs" Link="Shared\JsonSerializerConstants.cs" />
+    <Compile Include="..\Shared\ThrottlingDomainEventBehavior.cs">
+      <Link>Shared\ThrottlingDomainEventBehavior.cs</Link>
+    </Compile>
+    <Compile Include="..\Shared\ThrottlingException.cs">
+      <Link>Shared\ThrottlingException.cs</Link>
+    </Compile>
     <Compile Include="..\Shared\TracingHelper.cs" Link="Shared\TracingHelper.cs" />
     <Compile Include="..\Shared\AssemblyHelper.cs" Link="Shared\AssemblyHelper.cs" />
     <Compile Include="..\Shared\ServiceCollectionExtensions.cs" Link="Shared\ServiceCollectionExtensions.cs" />
