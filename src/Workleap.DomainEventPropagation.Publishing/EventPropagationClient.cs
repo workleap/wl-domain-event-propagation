@@ -1,3 +1,4 @@
+using Azure;
 using Azure.Messaging;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.Namespaces;
@@ -16,8 +17,8 @@ internal sealed class EventPropagationClient : IEventPropagationClient
 
     private readonly EventPropagationPublisherOptions _eventPropagationPublisherOptions;
     private readonly DomainEventsHandlerDelegate _pipeline;
-    private readonly EventGridPublisherClient _eventGridPublisherClient;
-    private readonly EventGridSenderClient _eventGridNamespaceClient;
+    private readonly EventGridPublisherClient? _eventGridPublisherClient;
+    private readonly EventGridSenderClient? _eventGridNamespaceClient;
 
     /// <summary>
     /// To support Namespace topic, we need to use the following EventGridClient https://github.com/Azure/azure-sdk-for-net/blob/Azure.Messaging.EventGrid_4.17.0-beta.1/sdk/eventgrid/Azure.Messaging.EventGridV2/src/Generated/EventGridClient.cs
@@ -31,8 +32,18 @@ internal sealed class EventPropagationClient : IEventPropagationClient
     {
         this._eventPropagationPublisherOptions = eventPropagationPublisherOptions.Value;
         this._pipeline = publishingDomainEventBehaviors.Reverse().Aggregate((DomainEventsHandlerDelegate)this.SendDomainEventsAsync, BuildPipeline);
-        this._eventGridPublisherClient = eventGridPublisherClientFactory.CreateClient(EventPropagationPublisherOptions.EventGridClientName);
-        this._eventGridNamespaceClient = eventGridClientFactory.CreateClient(EventPropagationPublisherOptions.EventGridClientName);
+
+        switch (this._eventPropagationPublisherOptions.TopicType)
+        {
+            case TopicType.Custom:
+                this._eventGridPublisherClient = eventGridPublisherClientFactory.CreateClient(EventPropagationPublisherOptions.EventGridClientName);
+                break;
+            case TopicType.Namespace:
+                this._eventGridNamespaceClient = eventGridClientFactory.CreateClient(EventPropagationPublisherOptions.EventGridClientName);
+                break;
+            default:
+                throw new InvalidOperationException($"Could not create the proper event grid client for topic type {this._eventPropagationPublisherOptions.TopicType}");
+        }
     }
 
     private static DomainEventsHandlerDelegate BuildPipeline(DomainEventsHandlerDelegate accumulator, IPublishingDomainEventBehavior next)
@@ -99,6 +110,11 @@ internal sealed class EventPropagationClient : IEventPropagationClient
         DomainEventWrapperCollection domainEventWrappers,
         CancellationToken cancellationToken)
     {
+        if (this._eventGridPublisherClient == null)
+        {
+            throw new InvalidOperationException($"Unable to send eventGrid event because the {nameof(EventGridPublisherClient)} is null");
+        }
+
         var topicType = this._eventPropagationPublisherOptions.TopicType;
         var eventGridEvents = domainEventWrappers.Select(wrapper => new EventGridEvent(
             subject: wrapper.DomainEventName,
@@ -140,15 +156,16 @@ internal sealed class EventPropagationClient : IEventPropagationClient
             });
         }
 
-        var topicName = this._eventPropagationPublisherOptions.TopicName;
-
         foreach (var eventBatch in Chunk(cloudEvents, EventGridMaxEventsPerBatch))
         {
-            var publishingTask = (Task)(this._eventPropagationPublisherOptions.TopicType is TopicType.Namespace
-                ? this._eventGridNamespaceClient.SendAsync(eventBatch, cancellationToken)
-                : this._eventGridPublisherClient.SendEventsAsync(eventBatch, cancellationToken));
-
-            await publishingTask.ConfigureAwait(false);
+            if (this._eventGridPublisherClient != null)
+            {
+                await this._eventGridPublisherClient.SendEventsAsync(eventBatch, cancellationToken).ConfigureAwait(false);
+            }
+            else if (this._eventGridNamespaceClient != null)
+            {
+                await this._eventGridNamespaceClient.SendAsync(eventBatch, cancellationToken).ConfigureAwait(false);
+            }
         }
     }
 
