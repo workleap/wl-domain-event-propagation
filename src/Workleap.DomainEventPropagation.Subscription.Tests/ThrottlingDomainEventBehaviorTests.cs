@@ -114,7 +114,7 @@ public class ThrottlingDomainEventBehaviorTests
     }
 
     [DomainEvent("test")]
-    private class TestDomainEvent : IDomainEvent
+    private sealed class TestDomainEvent : IDomainEvent
     {
         public string Text { get; set; } = string.Empty;
         public int Number { get; set; }
