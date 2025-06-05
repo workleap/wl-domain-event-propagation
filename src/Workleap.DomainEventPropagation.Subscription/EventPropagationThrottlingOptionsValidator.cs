@@ -2,7 +2,7 @@ using Microsoft.Extensions.Options;
 
 namespace Workleap.DomainEventPropagation;
 
-internal class EventPropagationThrottlingOptionsValidator : IValidateOptions<EventPropagationThrottlingOptions>
+internal sealed class EventPropagationThrottlingOptionsValidator : IValidateOptions<EventPropagationThrottlingOptions>
 {
     public ValidateOptionsResult Validate(string? name, EventPropagationThrottlingOptions options)
     {

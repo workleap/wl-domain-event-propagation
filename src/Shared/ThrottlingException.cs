@@ -1,3 +1,3 @@
 namespace Workleap.DomainEventPropagation;
 
-internal class ThrottlingException() : Exception;
+internal sealed class ThrottlingException() : Exception;

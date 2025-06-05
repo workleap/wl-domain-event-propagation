@@ -12,7 +12,7 @@ using Microsoft.Extensions.Hosting;
 namespace Workleap.DomainEventPropagation.Subscription.Tests.Apis;
 
 [Collection(XunitCollectionConstants.StaticActivitySensitive)]
-public class ThrottlingIntegrationTests(ThrottlingIntegrationTestsFixture fixture) : IClassFixture<ThrottlingIntegrationTestsFixture>
+public sealed class ThrottlingIntegrationTests(ThrottlingIntegrationTestsFixture fixture) : IClassFixture<ThrottlingIntegrationTestsFixture>
 {
     private readonly HttpClient _httpClient = fixture.CreateClient();
 

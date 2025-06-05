@@ -1,6 +1,6 @@
 namespace Workleap.DomainEventPropagation;
 
-public class EventPropagationThrottlingOptions
+public sealed class EventPropagationThrottlingOptions
 {
     internal const string DefaultSectionName = "EventPropagation:ThrottlingOptions";
 

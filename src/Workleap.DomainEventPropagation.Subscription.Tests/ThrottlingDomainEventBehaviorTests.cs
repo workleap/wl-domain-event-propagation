@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 
 namespace Workleap.DomainEventPropagation.Subscription.Tests;
 
-public class ThrottlingDomainEventBehaviorTests
+public sealed class ThrottlingDomainEventBehaviorTests
 {
     private readonly DomainEventHandlerDelegate _next = A.Fake<DomainEventHandlerDelegate>();
 

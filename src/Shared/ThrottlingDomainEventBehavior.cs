@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 
 namespace Workleap.DomainEventPropagation;
 
-internal class ThrottlingDomainEventBehavior(IOptions<EventPropagationThrottlingOptions> options) : ISubscriptionDomainEventBehavior, IDisposable
+internal sealed class ThrottlingDomainEventBehavior(IOptions<EventPropagationThrottlingOptions> options) : ISubscriptionDomainEventBehavior, IDisposable
 {
     private readonly RateLimiter _rateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
     {
