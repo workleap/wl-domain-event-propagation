@@ -8,12 +8,12 @@ internal sealed class EventPropagationThrottlingOptionsValidator : IValidateOpti
     {
         if (options.MaxEventsPerSecond <= 0)
         {
-            return ValidateOptionsResult.Fail("MaxEventsPerSecond must be a positive value");
+            return ValidateOptionsResult.Fail($"{nameof(EventPropagationThrottlingOptions.MaxEventsPerSecond)} must be a positive value");
         }
 
         if (options.QueueLimit <= 0)
         {
-            return ValidateOptionsResult.Fail("QueueLimit must be a positive value");
+            return ValidateOptionsResult.Fail($"{nameof(EventPropagationThrottlingOptions.QueueLimit)} must be a positive value");
         }
 
         return ValidateOptionsResult.Success;
