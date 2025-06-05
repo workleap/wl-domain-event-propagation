@@ -14,3 +14,4 @@ Workleap.DomainEventPropagation.EventPropagationThrottlingOptions.MaxEventsPerSe
 Workleap.DomainEventPropagation.EventPropagationThrottlingOptions.MaxEventsPerSecond.set -> void
 Workleap.DomainEventPropagation.EventPropagationThrottlingOptions.QueueLimit.get -> int
 Workleap.DomainEventPropagation.EventPropagationThrottlingOptions.QueueLimit.set -> void
+static Workleap.DomainEventPropagation.ServiceCollectionEventPropagationExtensions.AddRateLimiting(this Workleap.DomainEventPropagation.IEventPropagationSubscriberBuilder! builder, System.Action<Workleap.DomainEventPropagation.EventPropagationThrottlingOptions!>? configure = null) -> Workleap.DomainEventPropagation.IEventPropagationSubscriberBuilder!

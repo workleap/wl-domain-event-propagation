@@ -107,6 +107,7 @@ public sealed class ThrottlingIntegrationTestsFixture : WebApplicationFactory<Th
         {
             services
                 .AddEventPropagationSubscriber()
+                .AddRateLimiting()
                 .AddDomainEventHandler<DummyDomainEvent, DummyDomainEventHandler>();
         }
 
