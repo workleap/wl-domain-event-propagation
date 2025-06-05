@@ -19,7 +19,6 @@ public class ThrottlingIntegrationTests(ThrottlingIntegrationTestsFixture fixtur
     [Fact]
     public async Task GivenMultipleConcurrentRequests_WhenThrottlingEnabled_ThenSomeRequestsAreThrottled()
     {
-        // Arrange
         var wrapperEvent = DomainEventWrapper.Wrap(new DummyDomainEvent { PropertyB = 1, PropertyA = "Hello world" });
         var eventGridEvent = new EventGridEvent(
             subject: "subject",
@@ -30,7 +29,6 @@ public class ThrottlingIntegrationTests(ThrottlingIntegrationTestsFixture fixtur
             Topic = ThrottlingIntegrationTestsFixture.TestTopic,
         };
 
-        // Act
         var requestCount = 10;
         var tasks = new List<Task<HttpResponseMessage>>();
 
@@ -39,7 +37,6 @@ public class ThrottlingIntegrationTests(ThrottlingIntegrationTestsFixture fixtur
             tasks.Add(this._httpClient.PostAsJsonAsync("/eventgrid/domainevents", new[] { eventGridEvent }));
         }
 
-        // Wait for all requests to complete
         var responses = await Task.WhenAll(tasks);
 
         Assert.Contains(responses, r => r.StatusCode == System.Net.HttpStatusCode.TooManyRequests);
@@ -48,7 +45,6 @@ public class ThrottlingIntegrationTests(ThrottlingIntegrationTestsFixture fixtur
     [Fact]
     public async Task GivenMultipleConcurrentRequestsUnderLimit_WhenThrottlingEnabled_ThenNoThrottling()
     {
-        // Arrange
         var wrapperEvent = DomainEventWrapper.Wrap(new DummyDomainEvent { PropertyB = 1, PropertyA = "Hello world" });
         var eventGridEvent = new EventGridEvent(
             subject: "subject",
@@ -59,7 +55,6 @@ public class ThrottlingIntegrationTests(ThrottlingIntegrationTestsFixture fixtur
             Topic = ThrottlingIntegrationTestsFixture.TestTopic,
         };
 
-        // Act
         var tasks = new List<Task<HttpResponseMessage>>();
 
         for (var i = 0; i < ThrottlingIntegrationTestsFixture.MaxRequests; i++)
@@ -67,7 +62,6 @@ public class ThrottlingIntegrationTests(ThrottlingIntegrationTestsFixture fixtur
             tasks.Add(this._httpClient.PostAsJsonAsync("/eventgrid/domainevents", new[] { eventGridEvent }));
         }
 
-        // Wait for all requests to complete
         var responses = await Task.WhenAll(tasks);
 
         Assert.DoesNotContain(responses, r => r.StatusCode == System.Net.HttpStatusCode.TooManyRequests);
