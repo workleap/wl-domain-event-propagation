@@ -39,7 +39,7 @@ public sealed class ThrottlingIntegrationTests(ThrottlingIntegrationTestsFixture
 
         var responses = await Task.WhenAll(tasks);
 
-        Assert.Contains(responses, r => r.StatusCode == System.Net.HttpStatusCode.TooManyRequests);
+        Assert.Contains(responses, r => r.StatusCode == HttpStatusCode.TooManyRequests);
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public sealed class ThrottlingIntegrationTests(ThrottlingIntegrationTestsFixture
 
         var responses = await Task.WhenAll(tasks);
 
-        Assert.DoesNotContain(responses, r => r.StatusCode == System.Net.HttpStatusCode.TooManyRequests);
+        Assert.DoesNotContain(responses, r => r.StatusCode == HttpStatusCode.TooManyRequests);
     }
 }
 
