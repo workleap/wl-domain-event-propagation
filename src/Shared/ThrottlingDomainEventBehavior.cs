@@ -1,27 +1,19 @@
 ﻿using System.Threading.RateLimiting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Workleap.DomainEventPropagation;
 
-internal class ThrottlingDomainEventBehavior : ISubscriptionDomainEventBehavior
+internal class ThrottlingDomainEventBehavior(IOptions<EventPropagationThrottlingOptions> options) : ISubscriptionDomainEventBehavior, IDisposable
 {
-    private readonly ILogger<ThrottlingDomainEventBehavior> _logger;
-    private readonly RateLimiter _rateLimiter;
-
-    internal ThrottlingDomainEventBehavior(IOptions<EventPropagationThrottlingOptions> options, ILogger<ThrottlingDomainEventBehavior> logger)
+    private readonly RateLimiter _rateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
     {
-        this._logger = logger;
-        this._rateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
-        {
-            TokenLimit = options.Value.MaxEventsPerSecond,
-            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-            QueueLimit = options.Value.QueueLimit,
-            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
-            TokensPerPeriod = options.Value.MaxEventsPerSecond,
-            AutoReplenishment = true
-        });
-    }
+        TokenLimit = options.Value.MaxEventsPerSecond,
+        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+        QueueLimit = options.Value.QueueLimit,
+        ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+        TokensPerPeriod = options.Value.MaxEventsPerSecond,
+        AutoReplenishment = true
+    });
 
     public async Task HandleAsync(DomainEventWrapper domainEvent, DomainEventHandlerDelegate next, CancellationToken cancellationToken)
     {
@@ -33,9 +25,12 @@ internal class ThrottlingDomainEventBehavior : ISubscriptionDomainEventBehavior
         }
         else
         {
-            this._logger.LogWarning("Throttling event {EventName} due to rate limiting.", domainEvent.DomainEventName);
-
             throw new ThrottlingException();
         }
+    }
+
+    public void Dispose()
+    {
+        this._rateLimiter.Dispose();
     }
 }

@@ -22,12 +22,11 @@ public static class ServiceCollectionEventPropagationExtensions
             var section = configuration.GetSection(EventPropagationThrottlingOptions.DefaultSectionName);
             if (section.Exists())
             {
-                var options = new EventPropagationThrottlingOptions();
-                section.Bind(options);
-
-                services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<EventPropagationThrottlingOptions>, EventPropagationThrottlingOptionsValidator>());
-                services.Configure<EventPropagationThrottlingOptions>(section);
                 services.TryAddEnumerable(ServiceDescriptor.Singleton<ISubscriptionDomainEventBehavior, ThrottlingDomainEventBehavior>());
+                services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<EventPropagationThrottlingOptions>, EventPropagationThrottlingOptionsValidator>());
+                services.AddOptions<EventPropagationThrottlingOptions>()
+                    .BindConfiguration(EventPropagationThrottlingOptions.DefaultSectionName)
+                    .ValidateOnStart();
             }
         }
 
