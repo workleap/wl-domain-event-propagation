@@ -189,4 +189,3 @@ internal sealed class EventPropagationClient : IEventPropagationClient
         }
     }
 }
-

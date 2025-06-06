@@ -16,24 +16,31 @@ internal static class EventsApi
 
         EventGridRequestResult? result;
 
-        if (TryParseMany(events, out EventGridEvent[] eventGridEvents))
+        try
         {
-            result = await eventGridRequestHandler.HandleRequestAsync(eventGridEvents, cancellationToken).ConfigureAwait(false);
-        }
-        else if (TryParseMany(events, out CloudEvent[] cloudEvents))
-        {
-            result = await eventGridRequestHandler.HandleRequestAsync(cloudEvents, cancellationToken).ConfigureAwait(false);
-        }
-        else
-        {
-            throw new NotSupportedException("Unknown payload, only EventGridEvent or CloudEvent are supported");
-        }
+            if (TryParseMany(events, out EventGridEvent[] eventGridEvents))
+            {
+                result = await eventGridRequestHandler.HandleRequestAsync(eventGridEvents, cancellationToken).ConfigureAwait(false);
+            }
+            else if (TryParseMany(events, out CloudEvent[] cloudEvents))
+            {
+                result = await eventGridRequestHandler.HandleRequestAsync(cloudEvents, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                throw new NotSupportedException("Unknown payload, only EventGridEvent or CloudEvent are supported");
+            }
 
-        return result?.RequestType switch
+            return result?.RequestType switch
+            {
+                EventGridRequestType.Subscription => Results.Ok(result.ValidationResponse),
+                _ => Results.Ok(),
+            };
+        }
+        catch (ThrottlingException)
         {
-            EventGridRequestType.Subscription => Results.Ok(result.ValidationResponse),
-            _ => Results.Ok(),
-        };
+            return Results.StatusCode(429);
+        }
     }
 
     private static bool TryParseMany(BinaryData binaryEvents, out EventGridEvent[] events)
