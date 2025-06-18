@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   publish:
-    runs-on: [self-hosted, idp]
+    runs-on: [idp]
 
     steps:
       - uses: actions/checkout@v4
