@@ -36,8 +36,8 @@
     {
       "description": "Custom manager for renovating docker image versions listed in .cs files",
       "customType": "regex",
-      "fileMatch": [
-        "\\.cs$"
+      "managerFilePatterns": [
+        "/\\.cs$/"
       ],
       "matchStringsStrategy": "any",
       "matchStrings": [
