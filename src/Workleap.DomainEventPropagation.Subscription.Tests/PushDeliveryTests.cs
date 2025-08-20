@@ -147,7 +147,7 @@ public class PushDeliveryTests(ITestOutputHelper testOutputHelper)
         private static IContainer BuildContainer(string configurationPath)
         {
             return new ContainerBuilder()
-                .WithImage("workleap/eventgridemulator:0.6.20")
+                .WithImage("workleap/eventgridemulator:0.6.21")
                 .WithPortBinding(EmulatorPort, assignRandomHostPort: true)
                 .WithBindMount(configurationPath, "/app/appsettings.json", AccessMode.ReadOnly)
                 .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(EmulatorPort))
