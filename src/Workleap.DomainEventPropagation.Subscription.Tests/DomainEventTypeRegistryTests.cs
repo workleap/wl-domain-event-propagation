@@ -1,4 +1,4 @@
-﻿using Officevibe.DomainEvents;
+using Officevibe.DomainEvents;
 
 namespace Workleap.DomainEventPropagation.Subscription.Tests;
 

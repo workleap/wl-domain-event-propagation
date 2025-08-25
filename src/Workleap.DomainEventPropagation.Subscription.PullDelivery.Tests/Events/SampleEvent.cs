@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 
 namespace Workleap.DomainEventPropagation.Subscription.PullDelivery.Tests.Events;
 

@@ -1,4 +1,4 @@
-﻿namespace Workleap.DomainEventPropagation.Subscription.Tests.OfficevibeMigration;
+namespace Workleap.DomainEventPropagation.Subscription.Tests.OfficevibeMigration;
 
 public enum MeasuringUnit
 {

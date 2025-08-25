@@ -1,4 +1,4 @@
-﻿namespace Workleap.DomainEventPropagation.EventGridClientAdapter;
+namespace Workleap.DomainEventPropagation.EventGridClientAdapter;
 
 internal interface IEventGridClientWrapperFactory
 {

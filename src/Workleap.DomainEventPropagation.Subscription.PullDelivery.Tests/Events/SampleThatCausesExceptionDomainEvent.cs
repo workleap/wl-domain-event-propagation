@@ -1,4 +1,4 @@
-﻿namespace Workleap.DomainEventPropagation.Subscription.PullDelivery.Tests.Events;
+namespace Workleap.DomainEventPropagation.Subscription.PullDelivery.Tests.Events;
 
 [DomainEvent("sample-event-that-causes-exception", EventSchema.CloudEvent)]
 public class SampleThatCausesExceptionDomainEvent : IDomainEvent

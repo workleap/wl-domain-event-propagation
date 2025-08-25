@@ -1,4 +1,4 @@
-﻿using Azure.Messaging;
+using Azure.Messaging;
 using Microsoft.Extensions.Logging;
 
 namespace Workleap.DomainEventPropagation;

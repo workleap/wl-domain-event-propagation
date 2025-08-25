@@ -1,4 +1,4 @@
-﻿using Workleap.DomainEventPropagation;
+using Workleap.DomainEventPropagation;
 using Workleap.DomainEventPropagation.Subscription.Tests;
 using Workleap.DomainEventPropagation.Subscription.Tests.OfficevibeMigration;
 

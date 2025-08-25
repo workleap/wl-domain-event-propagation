@@ -1,4 +1,4 @@
-﻿using Azure.Messaging;
+using Azure.Messaging;
 
 namespace Workleap.DomainEventPropagation;
 

@@ -1,4 +1,4 @@
-﻿using GSoft.Extensions.Xunit;
+using GSoft.Extensions.Xunit;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;

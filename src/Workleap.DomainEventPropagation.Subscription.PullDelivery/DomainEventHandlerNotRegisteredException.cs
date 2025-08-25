@@ -1,4 +1,4 @@
-﻿namespace Workleap.DomainEventPropagation;
+namespace Workleap.DomainEventPropagation;
 
 internal sealed class DomainEventHandlerNotRegisteredException : Exception
 {
