@@ -1,4 +1,4 @@
-﻿namespace Workleap.DomainEventPropagation.Publishing.Tests;
+namespace Workleap.DomainEventPropagation.Publishing.Tests;
 
 [DomainEvent("sample-event")]
 public class SampleDomainEvent : IDomainEvent

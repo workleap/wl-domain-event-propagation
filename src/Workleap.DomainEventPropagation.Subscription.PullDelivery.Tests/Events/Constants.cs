@@ -1,4 +1,4 @@
-﻿namespace Workleap.DomainEventPropagation.Subscription.PullDelivery.Tests.Events;
+namespace Workleap.DomainEventPropagation.Subscription.PullDelivery.Tests.Events;
 
 public static class Constants
 {

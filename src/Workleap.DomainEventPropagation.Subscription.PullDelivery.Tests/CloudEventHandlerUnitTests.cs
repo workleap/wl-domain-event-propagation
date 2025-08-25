@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Azure.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;

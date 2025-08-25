@@ -1,4 +1,4 @@
-﻿namespace Workleap.DomainEventPropagation;
+namespace Workleap.DomainEventPropagation;
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class DomainEventAttribute : Attribute

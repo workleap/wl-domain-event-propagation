@@ -1,4 +1,4 @@
-﻿namespace Workleap.DomainEventPropagation;
+namespace Workleap.DomainEventPropagation;
 
 internal delegate Task DomainEventHandlerDelegate(DomainEventWrapper domainEventWrapper, CancellationToken cancellationToken);
 

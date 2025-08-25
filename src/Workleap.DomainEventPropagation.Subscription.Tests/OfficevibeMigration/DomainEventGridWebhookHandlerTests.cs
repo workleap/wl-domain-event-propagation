@@ -1,4 +1,4 @@
-﻿using Azure.Messaging.EventGrid;
+using Azure.Messaging.EventGrid;
 using FakeItEasy;
 using Microsoft.Extensions.Logging;
 using Officevibe.DomainEvents;

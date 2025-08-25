@@ -1,4 +1,4 @@
-﻿namespace Workleap.DomainEventPropagation.Analyzers.Internals;
+namespace Workleap.DomainEventPropagation.Analyzers.Internals;
 
 internal static class KnownSymbolNames
 {
