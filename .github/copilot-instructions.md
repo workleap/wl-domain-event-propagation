@@ -58,9 +58,9 @@ src/
 export PATH="$HOME/.dotnet:$PATH"
 cd src
 dotnet clean -c Debug
-dotnet build -c Debug          # 12s - NEVER CANCEL (30s timeout)
-dotnet format                  # Fix any formatting issues (20s)
-dotnet test -c Debug --no-restore  # 13s - NEVER CANCEL (45s timeout)
+dotnet build -c Debug
+dotnet format
+dotnet test -c Debug --no-restore
 ```
 
 ### Working with Domain Events
