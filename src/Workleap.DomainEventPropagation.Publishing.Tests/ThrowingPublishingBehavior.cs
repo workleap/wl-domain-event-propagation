@@ -1,4 +1,4 @@
-﻿namespace Workleap.DomainEventPropagation.Publishing.Tests;
+namespace Workleap.DomainEventPropagation.Publishing.Tests;
 
 internal sealed class ThrowingPublishingBehavior : IPublishingDomainEventBehavior
 {

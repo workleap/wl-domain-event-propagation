@@ -1,4 +1,4 @@
-﻿namespace Workleap.DomainEventPropagation.Subscription.Tests;
+namespace Workleap.DomainEventPropagation.Subscription.Tests;
 
 internal sealed class ThrowingSubscriptionBehavior : ISubscriptionDomainEventBehavior
 {

@@ -1,4 +1,4 @@
-﻿using Azure.Messaging.EventGrid;
+using Azure.Messaging.EventGrid;
 using FakeItEasy;
 using GSoft.Extensions.Xunit;
 using Microsoft.ApplicationInsights;

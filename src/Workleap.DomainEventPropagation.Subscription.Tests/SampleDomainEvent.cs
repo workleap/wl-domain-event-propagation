@@ -1,4 +1,4 @@
-﻿namespace Workleap.DomainEventPropagation.Subscription.Tests;
+namespace Workleap.DomainEventPropagation.Subscription.Tests;
 
 [DomainEvent("sample-event")]
 public sealed record SampleDomainEvent(string Message) : IDomainEvent;
