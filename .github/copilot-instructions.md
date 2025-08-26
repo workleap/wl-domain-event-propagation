@@ -15,7 +15,7 @@ Always reference these instructions first and fallback to search or bash command
 - **DO NOT use Release configuration in sandbox environments** -- Release build requires GitVersion and proper Git repository context. It will fail with MSB3073 error in sandboxed environments.
 
 ### Testing
-- Run all tests: `dotnet test -c Debug --no-restore` -- takes 13 seconds with 162 tests total. NEVER CANCEL. Set timeout to 45+ seconds.
+- Run all tests: `dotnet test -c Debug --no-restore`
 - Tests use testcontainers and may require Docker access.
 - **Expected results**: 161 tests pass, 1 test skipped, 0 failures.
 
