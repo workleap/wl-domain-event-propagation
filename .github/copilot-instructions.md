@@ -84,7 +84,6 @@ When making changes, always validate:
 
 ### Build Timing Expectations
 - **Clean + Build (Debug)**: ~12 seconds
-- **Test Suite**: ~13 seconds (162 tests) - 161 pass, 1 skip
 - **Format Check**: ~20 seconds  
 - **Total Development Cycle**: ~40 seconds
 
