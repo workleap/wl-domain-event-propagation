@@ -17,7 +17,7 @@ Always reference these instructions first and fallback to search or bash command
 ### Testing
 - Run all tests: `dotnet test -c Debug --no-restore`
 - Tests use testcontainers and may require Docker access.
-- **Expected results**: 161 tests pass, 1 test skipped, 0 failures.
+- **Expected results**: 0 failures.
 
 ### Code Quality and Formatting
 - Check formatting: `dotnet format --verify-no-changes` -- takes 20 seconds. NEVER CANCEL. Set timeout to 45+ seconds.
