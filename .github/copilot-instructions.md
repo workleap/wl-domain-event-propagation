@@ -20,7 +20,7 @@ Always reference these instructions first and fallback to search or bash command
 - **Expected results**: 0 failures.
 
 ### Code Quality and Formatting
-- Check formatting: `dotnet format --verify-no-changes` -- takes 20 seconds. NEVER CANCEL. Set timeout to 45+ seconds.
+- Check formatting: `dotnet format --verify-no-changes`
 - Fix formatting: `dotnet format`
 - **ALWAYS run `dotnet format` before committing** or CI will fail.
 - Repository uses Workleap.DotNet.CodingStandards for code standards enforcement.
