@@ -16,7 +16,7 @@ internal sealed class EventPropagationClient : IEventPropagationClient
     private const string DomainEventDefaultVersion = "1.0";
 
     private readonly EventPropagationPublisherOptions _eventPropagationPublisherOptions;
-    private readonly DomainEventsHandlerDelegate _pipeline;
+    private readonly PublishingDomainEventHandlerDelegate _pipeline;
     private readonly EventGridPublisherClient? _eventGridPublisherClient;
     private readonly EventGridSenderClient? _eventGridNamespaceClient;
 
@@ -31,7 +31,7 @@ internal sealed class EventPropagationClient : IEventPropagationClient
         IEnumerable<IPublishingDomainEventBehavior> publishingDomainEventBehaviors)
     {
         this._eventPropagationPublisherOptions = eventPropagationPublisherOptions.Value;
-        this._pipeline = publishingDomainEventBehaviors.Reverse().Aggregate((DomainEventsHandlerDelegate)this.SendDomainEventsAsync, BuildPipeline);
+        this._pipeline = publishingDomainEventBehaviors.Reverse().Aggregate((PublishingDomainEventHandlerDelegate)this.SendDomainEventsAsync, BuildPipeline);
 
         switch (this._eventPropagationPublisherOptions.TopicType)
         {
@@ -46,7 +46,7 @@ internal sealed class EventPropagationClient : IEventPropagationClient
         }
     }
 
-    private static DomainEventsHandlerDelegate BuildPipeline(DomainEventsHandlerDelegate accumulator, IPublishingDomainEventBehavior next)
+    private static PublishingDomainEventHandlerDelegate BuildPipeline(PublishingDomainEventHandlerDelegate accumulator, IPublishingDomainEventBehavior next)
     {
         return (events, cancellationToken) => next.HandleAsync(events, accumulator, cancellationToken);
     }
@@ -96,7 +96,7 @@ internal sealed class EventPropagationClient : IEventPropagationClient
         }
     }
 
-    private Task SendDomainEventsAsync(DomainEventWrapperCollection domainEventWrappers, CancellationToken cancellationToken)
+    private Task SendDomainEventsAsync(IDomainEventWrapperCollection domainEventWrappers, CancellationToken cancellationToken)
     {
         return domainEventWrappers.DomainSchema switch
         {
@@ -107,7 +107,7 @@ internal sealed class EventPropagationClient : IEventPropagationClient
     }
 
     private async Task SendEventGridEvents(
-        DomainEventWrapperCollection domainEventWrappers,
+        IDomainEventWrapperCollection domainEventWrappers,
         CancellationToken cancellationToken)
     {
         if (this._eventGridPublisherClient == null)
@@ -116,11 +116,13 @@ internal sealed class EventPropagationClient : IEventPropagationClient
         }
 
         var topicType = this._eventPropagationPublisherOptions.TopicType;
-        var eventGridEvents = domainEventWrappers.Select(wrapper => new EventGridEvent(
-            subject: wrapper.DomainEventName,
-            eventType: wrapper.DomainEventName,
-            dataVersion: DomainEventDefaultVersion,
-            data: new BinaryData(wrapper.Data)));
+        var eventGridEvents = domainEventWrappers
+            .Cast<DomainEventWrapper>()
+            .Select(wrapper => new EventGridEvent(
+                subject: wrapper.DomainEventName,
+                eventType: wrapper.DomainEventName,
+                dataVersion: DomainEventDefaultVersion,
+                data: new BinaryData(wrapper.Data)));
 
         switch (topicType)
         {
@@ -139,22 +141,22 @@ internal sealed class EventPropagationClient : IEventPropagationClient
     }
 
     private async Task SendCloudEvents(
-        DomainEventWrapperCollection domainEventWrappers,
+        IDomainEventWrapperCollection domainEventWrappers,
         CancellationToken cancellationToken)
     {
-        var cloudEvents = domainEventWrappers.Select(wrapper => new CloudEvent(
-            type: wrapper.DomainEventName,
-            source: this._eventPropagationPublisherOptions.TopicEndpoint,
-            jsonSerializableData: wrapper.Data));
+        var cloudEvents = domainEventWrappers
+            .Cast<DomainEventWrapper>()
+            .Select(wrapper => new CloudEvent(
+                type: wrapper.DomainEventName,
+                source: this._eventPropagationPublisherOptions.TopicEndpoint,
+                jsonSerializableData: wrapper.Data));
 
-        if (domainEventWrappers.ConfigureDomainEventMetadata != null)
-        {
-            cloudEvents = cloudEvents.Select(cloudEvent =>
+        cloudEvents = domainEventWrappers.ConfigureDomainEventMetadataActions
+            .Aggregate(cloudEvents, (current, configureDomainEventMetadataAction) => current.Select(cloudEvent =>
             {
-                domainEventWrappers.ConfigureDomainEventMetadata(new DomainEventMetadataWrapper(cloudEvent));
+                configureDomainEventMetadataAction(new DomainEventMetadataWrapper(cloudEvent));
                 return cloudEvent;
-            });
-        }
+            }));
 
         foreach (var eventBatch in Chunk(cloudEvents, EventGridMaxEventsPerBatch))
         {

@@ -179,7 +179,8 @@ internal sealed class EventPullerService : BackgroundService
         {
             try
             {
-                await cloudEventHandler.HandleCloudEventAsync(eventBundle.Event, cancellationToken).ConfigureAwait(false);
+                var context = new DomainEventSubscriptionContext { AttemptCount = eventBundle.DeliveryCount, MaxAttempts = this._eventGridTopicSubscription.MaxRetriesCount };
+                await cloudEventHandler.HandleCloudEventAsync(eventBundle.Event, context, cancellationToken).ConfigureAwait(false);
                 await this._acknowledgeEventChannel.Writer.WriteAsync(eventBundle, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)

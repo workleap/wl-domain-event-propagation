@@ -43,4 +43,17 @@ internal sealed class EventPropagationSubscriberBuilder : IEventPropagationSubsc
         this.Services.AddDomainEventHandler<TEvent, THandler>(this._domainEventTypeRegistry);
         return this;
     }
+
+    public IEventPropagationSubscriberBuilder AddBehavior<TBehavior>()
+        where TBehavior : class, ISubscriptionDomainEventBehavior
+    {
+        this.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ISubscriptionDomainEventBehavior, TBehavior>());
+        return this;
+    }
+
+    public IEventPropagationSubscriberBuilder AddBehavior(ISubscriptionDomainEventBehavior behavior)
+    {
+        this.Services.TryAddEnumerable(ServiceDescriptor.Singleton(behavior));
+        return this;
+    }
 }

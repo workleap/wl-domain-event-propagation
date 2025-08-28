@@ -15,6 +15,7 @@ public class DomainEventGridWebhookHandlerTests
     private readonly ILogger<DomainEventGridWebhookHandler> _logger = A.Fake<ILogger<DomainEventGridWebhookHandler>>();
 
     private readonly EventGridEvent _eventGridEvent = new EventGridEvent("subject", DomainEvent.GetType().FullName, "1.0", BinaryData.FromObjectAsJson(DomainEvent));
+    private readonly IDomainEventSubscriptionContext _subscriptionContext = A.Fake<IDomainEventSubscriptionContext>();
 
     [Fact]
     public async Task GivenDomainEventIsFired_WhenDomainEventTypeUnknown_ThenDomainEventIsIgnored()
@@ -29,7 +30,7 @@ public class DomainEventGridWebhookHandlerTests
             this._logger,
             Array.Empty<ISubscriptionDomainEventBehavior>());
 
-        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, CancellationToken.None);
+        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, this._subscriptionContext, CancellationToken.None);
 
         // Then
         A.CallTo(() => this._domainEventHandler.HandleDomainEventAsync(A<OfficevibeEvent>._, A<CancellationToken>._)).MustNotHaveHappened();
@@ -48,7 +49,7 @@ public class DomainEventGridWebhookHandlerTests
             this._logger,
             Array.Empty<ISubscriptionDomainEventBehavior>());
 
-        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, CancellationToken.None);
+        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, this._subscriptionContext, CancellationToken.None);
 
         // Then
         A.CallTo(() => this._domainEventHandler.HandleDomainEventAsync(A<OfficevibeEvent>._, A<CancellationToken>._)).MustNotHaveHappened();
@@ -68,7 +69,7 @@ public class DomainEventGridWebhookHandlerTests
             this._logger,
             Array.Empty<ISubscriptionDomainEventBehavior>());
 
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, this._subscriptionContext, CancellationToken.None));
 
         // Then
         A.CallTo(() => this._domainEventHandler.HandleDomainEventAsync(A<OfficevibeEvent>._, A<CancellationToken>._)).MustNotHaveHappened();
@@ -89,7 +90,7 @@ public class DomainEventGridWebhookHandlerTests
             this._logger,
             Array.Empty<ISubscriptionDomainEventBehavior>());
 
-        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, CancellationToken.None);
+        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, this._subscriptionContext, CancellationToken.None);
 
         // Then
         A.CallTo(() => this._domainEventHandler.HandleDomainEventAsync(A<OfficevibeEvent>._, A<CancellationToken>._)).MustHaveHappenedOnceExactly();
@@ -110,7 +111,7 @@ public class DomainEventGridWebhookHandlerTests
             this._logger,
             Array.Empty<ISubscriptionDomainEventBehavior>());
 
-        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, CancellationToken.None);
+        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, this._subscriptionContext, CancellationToken.None);
 
         // Then
         A.CallTo(() => this._domainEventHandler.HandleDomainEventAsync(A<OfficevibeEvent>._, A<CancellationToken>._)).MustHaveHappenedOnceExactly();

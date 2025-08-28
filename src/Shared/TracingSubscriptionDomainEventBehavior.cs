@@ -5,7 +5,7 @@ namespace Workleap.DomainEventPropagation;
 
 internal sealed class TracingSubscriptionDomainEventBehavior : ISubscriptionDomainEventBehavior
 {
-    public async Task HandleAsync(DomainEventWrapper domainEventWrapper, DomainEventHandlerDelegate next, CancellationToken cancellationToken)
+    public async Task HandleAsync(IDomainEventWrapper domainEventWrapper, IDomainEventSubscriptionContext subscriptionContext, SubscriptionDomainEventHandlerDelegate next, CancellationToken cancellationToken)
     {
         var activityName = GetSubscriptionActivityName(domainEventWrapper);
         var propagationContext = ExtractPropagationContextFromEvent(domainEventWrapper);
@@ -14,30 +14,30 @@ internal sealed class TracingSubscriptionDomainEventBehavior : ISubscriptionDoma
 
         if (activity == null)
         {
-            await next(domainEventWrapper, cancellationToken).ConfigureAwait(false);
+            await next(domainEventWrapper, subscriptionContext, cancellationToken).ConfigureAwait(false);
         }
         else
         {
-            await HandleWithTracing(domainEventWrapper, next, activity, cancellationToken).ConfigureAwait(false);
+            await HandleWithTracing(domainEventWrapper, subscriptionContext, next, activity, cancellationToken).ConfigureAwait(false);
         }
     }
 
-    private static PropagationContext ExtractPropagationContextFromEvent(DomainEventWrapper domainEventWrapper)
+    private static PropagationContext ExtractPropagationContextFromEvent(IDomainEventWrapper domainEventWrapper)
     {
         return Propagators.DefaultTextMapPropagator.Extract(default, domainEventWrapper, ExtractActivityProperties);
     }
 
-    private static IEnumerable<string> ExtractActivityProperties(DomainEventWrapper domainEventWrapper, string key)
+    private static IEnumerable<string> ExtractActivityProperties(IDomainEventWrapper domainEventWrapper, string key)
     {
         return domainEventWrapper.TryGetMetadata(key, out var value) ? [value!] : [];
     }
 
-    private static async Task HandleWithTracing(DomainEventWrapper domainEventWrapper, DomainEventHandlerDelegate next, Activity activity, CancellationToken cancellationToken)
+    private static async Task HandleWithTracing(IDomainEventWrapper domainEventWrapper, IDomainEventSubscriptionContext subscriptionContext, SubscriptionDomainEventHandlerDelegate next, Activity activity, CancellationToken cancellationToken)
     {
         try
         {
             AddEventActivityTags(activity, domainEventWrapper);
-            await next(domainEventWrapper, cancellationToken).ConfigureAwait(false);
+            await next(domainEventWrapper, subscriptionContext, cancellationToken).ConfigureAwait(false);
 
             TracingHelper.MarkAsSuccessful(activity);
         }
@@ -48,14 +48,14 @@ internal sealed class TracingSubscriptionDomainEventBehavior : ISubscriptionDoma
         }
     }
 
-    private static string GetSubscriptionActivityName(DomainEventWrapper domainEventWrappers) => domainEventWrappers.DomainEventSchema switch
+    private static string GetSubscriptionActivityName(IDomainEventWrapper domainEventWrappers) => domainEventWrappers.DomainEventSchema switch
     {
         EventSchema.EventGridEvent => TracingHelper.GetEventGridEventsSubscriberActivityName(domainEventWrappers.DomainEventName),
         EventSchema.CloudEvent => TracingHelper.GetCloudEventsSubscriberActivityName(domainEventWrappers.DomainEventName),
         _ => TracingHelper.GetEventGridEventsSubscriberActivityName(domainEventWrappers.DomainEventName),
     };
 
-    private static void AddEventActivityTags(Activity activity, DomainEventWrapper domainEventWrapper)
+    private static void AddEventActivityTags(Activity activity, IDomainEventWrapper domainEventWrapper)
     {
         switch (domainEventWrapper.DomainEventSchema)
         {

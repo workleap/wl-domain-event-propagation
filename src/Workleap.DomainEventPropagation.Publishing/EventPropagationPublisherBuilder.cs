@@ -20,6 +20,19 @@ internal sealed class EventPropagationPublisherBuilder : IEventPropagationPublis
 
     public IServiceCollection Services { get; }
 
+    public IEventPropagationPublisherBuilder AddBehavior<TBehavior>()
+        where TBehavior : class, IPublishingDomainEventBehavior
+    {
+        this.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPublishingDomainEventBehavior, TBehavior>());
+        return this;
+    }
+
+    public IEventPropagationPublisherBuilder AddBehavior(IPublishingDomainEventBehavior behavior)
+    {
+        this.Services.TryAddEnumerable(ServiceDescriptor.Singleton(behavior));
+        return this;
+    }
+
     private void AddRegistrations(Action<EventPropagationPublisherOptions> configure)
     {
         this.Services
