@@ -4,10 +4,10 @@ namespace Workleap.DomainEventPropagation;
 
 internal sealed class DomainEventWrapperCollection : IDomainEventWrapperCollection
 {
-    private readonly DomainEventWrapper[] _domainEventWrappers;
+    private readonly IDomainEventWrapper[] _domainEventWrappers;
     private readonly List<Action<IDomainEventMetadata>> _configureDomainEventMetadataActions;
 
-    private DomainEventWrapperCollection(IEnumerable<DomainEventWrapper> domainEventWrappers, Action<IDomainEventMetadata>? configureDomainEventMetadata, string domainEventName, EventSchema schema)
+    private DomainEventWrapperCollection(IEnumerable<IDomainEventWrapper> domainEventWrappers, Action<IDomainEventMetadata>? configureDomainEventMetadata, string domainEventName, EventSchema schema)
     {
         this._domainEventWrappers = domainEventWrappers.ToArray();
         this.DomainEventName = domainEventName;
@@ -44,7 +44,7 @@ internal sealed class DomainEventWrapperCollection : IDomainEventWrapperCollecti
     public IEnumerator<IDomainEventWrapper> GetEnumerator()
     {
         // See https://stackoverflow.com/questions/1272673/obtain-generic-enumerator-from-an-array
-        return ((IEnumerable<DomainEventWrapper>)this._domainEventWrappers).GetEnumerator();
+        return ((IEnumerable<IDomainEventWrapper>)this._domainEventWrappers).GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()
