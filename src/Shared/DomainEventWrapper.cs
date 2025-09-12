@@ -5,7 +5,7 @@ using Azure.Messaging.EventGrid;
 
 namespace Workleap.DomainEventPropagation;
 
-internal sealed class DomainEventWrapper
+internal sealed class DomainEventWrapper : IDomainEventWrapper
 {
     public DomainEventWrapper(EventGridEvent eventGridEvent)
     {
@@ -42,14 +42,16 @@ internal sealed class DomainEventWrapper
 
     public EventSchema DomainEventSchema { get; }
 
-    public void SetMetadata(string key, string value)
+    public void SetData(string key, string value)
     {
-        this.Data[GetMetadataKey(key)] = value;
+        this.Data[key] = value;
     }
 
-    public bool TryGetMetadata(string key, out string? value)
+    public void SetMetadata(string key, string value) => this.SetData(GetMetadataKey(key), value);
+
+    public bool TryGetData(string key, out string? value)
     {
-        if (this.Data.TryGetPropertyValue(GetMetadataKey(key), out var nodeValue) && nodeValue != null)
+        if (this.Data.TryGetPropertyValue(key, out var nodeValue) && nodeValue != null)
         {
             value = nodeValue.GetValue<string?>();
             return true;
@@ -58,6 +60,8 @@ internal sealed class DomainEventWrapper
         value = null;
         return false;
     }
+
+    public bool TryGetMetadata(string key, out string? value) => this.TryGetData(GetMetadataKey(key), out value);
 
     private static string GetMetadataKey(string key) => "__" + key;
 
