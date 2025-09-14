@@ -15,8 +15,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.15.0" />
-    <PackageReference Include="Azure.Core" Version="1.47.3" />
+    <PackageReference Include="Azure.Identity" Version="1.16.0" />
+    <PackageReference Include="Azure.Core" Version="1.48.0" />
     <PackageReference Include="Azure.Messaging.EventGrid" Version="5.0.0" />
     <PackageReference Include="Azure.Messaging.EventGrid.Namespaces" Version="1.1.0" />
     <PackageReference Include="Microsoft.Extensions.Azure" Version="1.12.0" />
