@@ -30,7 +30,7 @@ public class EventsApiUnitTests
         var httpRequest = await CreateHttpRequest(GenerateEventGridEvents());
         var eventGridRequestResult = new EventGridRequestResult(EventGridRequestType.Subscription, subscriptionValidationResponse);
 
-        A.CallTo(() => this._eventGridRequestHandler.HandleRequestAsync(A<EventGridEvent[]>._, A<CancellationToken>._)).Returns(Task.FromResult(eventGridRequestResult));
+        A.CallTo(() => this._eventGridRequestHandler.HandleRequestAsync(A<EventGridEvent[]>._, A<DomainEventSubscriptionContext>._, A<CancellationToken>._)).Returns(Task.FromResult(eventGridRequestResult));
 
         // When
         var actualResult = await EventsApi.HandleEvents(httpRequest, this._eventGridRequestHandler, CancellationToken.None);
@@ -55,7 +55,7 @@ public class EventsApiUnitTests
         var httpRequest = await CreateHttpRequest(GenerateCloudEvents());
         var eventGridRequestResult = new EventGridRequestResult(EventGridRequestType.Subscription, subscriptionValidationResponse);
 
-        A.CallTo(() => this._eventGridRequestHandler.HandleRequestAsync(A<CloudEvent[]>._, A<CancellationToken>._)).Returns(Task.FromResult(eventGridRequestResult));
+        A.CallTo(() => this._eventGridRequestHandler.HandleRequestAsync(A<CloudEvent[]>._, A<DomainEventSubscriptionContext>._, A<CancellationToken>._)).Returns(Task.FromResult(eventGridRequestResult));
 
         // When
         var actualResult = await EventsApi.HandleEvents(httpRequest, this._eventGridRequestHandler, CancellationToken.None);
@@ -75,7 +75,7 @@ public class EventsApiUnitTests
         var eventGridRequestResult = new EventGridRequestResult(EventGridRequestType.Event);
 
         var httpRequest = await CreateHttpRequest(GenerateEventGridEvents());
-        A.CallTo(() => this._eventGridRequestHandler.HandleRequestAsync(A<EventGridEvent[]>._, A<CancellationToken>._)).Returns(Task.FromResult(eventGridRequestResult));
+        A.CallTo(() => this._eventGridRequestHandler.HandleRequestAsync(A<EventGridEvent[]>._, A<DomainEventSubscriptionContext>._, A<CancellationToken>._)).Returns(Task.FromResult(eventGridRequestResult));
 
         // When
         var actualResult = await EventsApi.HandleEvents(httpRequest, this._eventGridRequestHandler, CancellationToken.None);
@@ -94,7 +94,7 @@ public class EventsApiUnitTests
         var eventGridRequestResult = new EventGridRequestResult(EventGridRequestType.Event);
 
         var httpRequest = await CreateHttpRequest(GenerateCloudEvents());
-        A.CallTo(() => this._eventGridRequestHandler.HandleRequestAsync(A<CloudEvent[]>._, A<CancellationToken>._)).Returns(Task.FromResult(eventGridRequestResult));
+        A.CallTo(() => this._eventGridRequestHandler.HandleRequestAsync(A<CloudEvent[]>._, A<DomainEventSubscriptionContext>._, A<CancellationToken>._)).Returns(Task.FromResult(eventGridRequestResult));
 
         // When
         var actualResult = await EventsApi.HandleEvents(httpRequest, this._eventGridRequestHandler, CancellationToken.None);
