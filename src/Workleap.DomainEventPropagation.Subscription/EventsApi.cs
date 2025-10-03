@@ -13,16 +13,17 @@ internal static class EventsApi
         CancellationToken cancellationToken)
     {
         var events = await BinaryData.FromStreamAsync(request.Body, cancellationToken).ConfigureAwait(false);
+        var subscriptionContext = TryParseSubscriptionContext(request);
 
         EventGridRequestResult? result;
 
         if (TryParseMany(events, out EventGridEvent[] eventGridEvents))
         {
-            result = await eventGridRequestHandler.HandleRequestAsync(eventGridEvents, cancellationToken).ConfigureAwait(false);
+            result = await eventGridRequestHandler.HandleRequestAsync(eventGridEvents, subscriptionContext, cancellationToken).ConfigureAwait(false);
         }
         else if (TryParseMany(events, out CloudEvent[] cloudEvents))
         {
-            result = await eventGridRequestHandler.HandleRequestAsync(cloudEvents, cancellationToken).ConfigureAwait(false);
+            result = await eventGridRequestHandler.HandleRequestAsync(cloudEvents, subscriptionContext, cancellationToken).ConfigureAwait(false);
         }
         else
         {
@@ -62,6 +63,13 @@ internal static class EventsApi
             events = [];
             return false;
         }
+    }
+
+    private static DomainEventSubscriptionContext TryParseSubscriptionContext(HttpRequest request)
+    {
+        // TODO: Implement support for this. Apparently Azure Event Grid adds a header "aeg-delivery-count" to indicate the number of delivery attempts for a given event.
+        // For now, we just return an empty context.
+        return new DomainEventSubscriptionContext();
     }
 
     internal static class Routes
