@@ -102,6 +102,9 @@ When making changes, always validate:
 ### Analyzers 
 - If you modify the analyzers, make sure to check for performance impacts. You can run `dotnet build -bl` on a project that references the analyzers and then look at the `msbuild.binlog` file with [MSBuild Structured Log Viewer](https://msbuildlog.com/) to see how much time the analyzers are taking during the build before and after your changes.
 
+### Observability
+- The library, by default, handles distributed OTEL traces for both EventGrid Events and CloudEvents.
+
 ### Historical notes
 - We support EventGrid events because this is what was used in our existing services when this library was created.
 - Ideally we want to move to CloudEvents only as this is where Microsoft's investments are mostly going.
