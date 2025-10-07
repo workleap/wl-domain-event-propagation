@@ -11,8 +11,7 @@ Always reference these instructions first and fallback to search or bash command
 - Install .NET SDK 8.0.404 for tests: `curl -L https://dotnet.microsoft.com/download/dotnet/scripts/v1/dotnet-install.sh | bash -s -- --version 8.0.404`
 - Update PATH: `export PATH="$HOME/.dotnet:$PATH"`
 - Navigate to src directory: `cd /path/to/repo/src`
-- Clean and build: `dotnet clean -c Debug && dotnet build -c Debug` -- takes 12 seconds. NEVER CANCEL. Set timeout to 30+ seconds.
-- **DO NOT use Release configuration in sandbox environments** -- Release build requires GitVersion and proper Git repository context. It will fail with MSB3073 error in sandboxed environments.
+- Clean and build: `dotnet clean -c Debug && dotnet build -c Debug`
 
 ### Testing
 - Run all tests: `dotnet test -c Debug --no-restore`
@@ -26,16 +25,15 @@ Always reference these instructions first and fallback to search or bash command
 - Repository uses Workleap.DotNet.CodingStandards for code standards enforcement.
 
 ### PowerShell Build Script (Production)
-- For comprehensive builds: `./Build.ps1` (requires proper Git repository context)
+- For comprehensive builds: `./Build.ps1`. The built package will only be published if the NUGET_SOURCE env variable is set.
 - Skip tests in build: `./Build.ps1 -SkipTests`
-- **Note**: This script is designed for CI/CD environments and may fail in sandbox due to GitVersion requirements.
+- This script is meant to be used locally and in CI/CD pipelines.
 
 ## Validation
 
 - ALWAYS manually test publishing and subscription scenarios when making core changes.
 - ALWAYS run through complete build and test cycle: clean, build, format, test.
 - ALWAYS run `dotnet format` and ensure no formatting issues remain.
-- You can build and test the solution locally, but Release configuration requires proper CI environment.
 - The solution builds successfully in Debug mode and all tests pass consistently.
 
 ## Common Tasks
@@ -109,3 +107,4 @@ When making changes, always validate:
 - Ideally we want to move to CloudEvents only as this is where Microsoft's investments are mostly going.
 - We still need to do some work to support more capabilities for cloud events that would enable better filtering. Things like being able to configure the subject and source fields when necessary.
 - There currently is no tooling around supporting a Dead Letter Queue (DLQ).
+- OV had plans to migrate from their event library to ours, here's the migration plan we wrote for them: https://workleap.atlassian.net/wiki/x/dwCq6Q
