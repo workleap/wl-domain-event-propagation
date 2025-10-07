@@ -82,11 +82,6 @@ When making changes, always validate:
 3. **Configuration Validation**: Test with various Azure Event Grid configurations
 4. **Application Insights Integration**: Verify tracing and telemetry work correctly
 
-### Build Timing Expectations
-- **Clean + Build (Debug)**: ~12 seconds
-- **Format Check**: ~20 seconds  
-- **Total Development Cycle**: ~40 seconds
-
 ### Common Issues and Solutions
 - **GitVersion errors**: Use Debug configuration in sandbox environments
 - **Test failures**: Ensure both .NET 8.0 and 9.0 SDKs are installed
@@ -105,3 +100,12 @@ When making changes, always validate:
 - Build script supports environment variables for NuGet publishing
 - Release configuration requires proper Git repository context for GitVersion
 - CI uses both .NET 8.0 and 9.0 SDKs for compatibility
+
+### Analyzers 
+- If you modify the analyzers, make sure to check for performance impacts. You can run `dotnet build -bl` on a project that references the analyzers and then look at the `msbuild.binlog` file with [MSBuild Structured Log Viewer](https://msbuildlog.com/) to see how much time the analyzers are taking during the build before and after your changes.
+
+### Historical notes
+- We support EventGrid events because this is what was used in our existing services when this library was created.
+- Ideally we want to move to CloudEvents only as this is where Microsoft's investments are mostly going.
+- We still need to do some work to support more capabilities for cloud events that would enable better filtering. Things like being able to configure the subject and source fields when necessary.
+- There currently is no tooling around supporting a Dead Letter Queue (DLQ).
