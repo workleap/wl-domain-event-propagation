@@ -28,9 +28,10 @@ public class CloudEventHandlerUnitTests
             .AddTopicSubscription()
             .AddDomainEventHandler<SampleEvent, SampleEventTestHandler>();
         var handler = GivenCloudEventHandler(services);
+        var context = GivenEventSubscriptionContext();
 
         // When
-        await Assert.ThrowsAsync<CloudEventSerializationException>(() => handler.HandleCloudEventAsync(cloudEvent, CancellationToken.None));
+        await Assert.ThrowsAsync<CloudEventSerializationException>(() => handler.HandleCloudEventAsync(cloudEvent, context, CancellationToken.None));
     }
 
     [Fact]
@@ -41,9 +42,10 @@ public class CloudEventHandlerUnitTests
         var services = new ServiceCollection();
         services.AddPullDeliverySubscription();
         var handler = GivenCloudEventHandler(services);
+        var context = GivenEventSubscriptionContext();
 
         // When
-        await Assert.ThrowsAsync<DomainEventTypeNotRegisteredException>(() => handler.HandleCloudEventAsync(cloudEvent, CancellationToken.None));
+        await Assert.ThrowsAsync<DomainEventTypeNotRegisteredException>(() => handler.HandleCloudEventAsync(cloudEvent, context, CancellationToken.None));
     }
 
     [Fact]
@@ -61,9 +63,10 @@ public class CloudEventHandlerUnitTests
             .AddTopicSubscription()
             .AddDomainEventHandler<SampleThatCausesExceptionDomainEvent, SampleThatCausesExceptionDomainEventHandler>();
         var handler = GivenCloudEventHandler(services);
+        var context = GivenEventSubscriptionContext();
 
         // When
-        await Assert.ThrowsAnyAsync<Exception>(() => handler.HandleCloudEventAsync(cloudEvent, CancellationToken.None));
+        await Assert.ThrowsAnyAsync<Exception>(() => handler.HandleCloudEventAsync(cloudEvent, context, CancellationToken.None));
     }
 
     [Fact]
@@ -78,9 +81,10 @@ public class CloudEventHandlerUnitTests
             .AddTopicSubscription()
             .AddDomainEventHandler<SampleEvent, SampleEventTestHandler>();
         var handler = GivenCloudEventHandler(services);
+        var context = GivenEventSubscriptionContext();
 
         // When
-        await handler.HandleCloudEventAsync(cloudEvent, CancellationToken.None);
+        await handler.HandleCloudEventAsync(cloudEvent, context, CancellationToken.None);
 
         // Then
         Assert.Single(SampleEventTestHandler.ReceivedEvents, e => e.Message == eventMessage);
@@ -98,9 +102,10 @@ public class CloudEventHandlerUnitTests
             .AddTopicSubscription()
             .AddDomainEventHandlers(Assembly.GetAssembly(typeof(CloudEventHandlerUnitTests))!);
         var handler = GivenCloudEventHandler(services);
+        var context = GivenEventSubscriptionContext();
 
         // When
-        await handler.HandleCloudEventAsync(cloudEvent, CancellationToken.None);
+        await handler.HandleCloudEventAsync(cloudEvent, context, CancellationToken.None);
 
         // Then
         Assert.Single(SampleEventTestHandler.ReceivedEvents, e => e.Message == eventMessage);
@@ -121,5 +126,10 @@ public class CloudEventHandlerUnitTests
         services.AddSingleton<ILogger<ICloudEventHandler>, NullLogger<ICloudEventHandler>>();
         var sp = services.BuildServiceProvider();
         return sp.GetRequiredService<ICloudEventHandler>();
+    }
+
+    private static IDomainEventSubscriptionContext GivenEventSubscriptionContext()
+    {
+        return new DomainEventSubscriptionContext();
     }
 }
