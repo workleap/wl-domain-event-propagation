@@ -150,7 +150,7 @@ public class PushDeliveryTests(ITestOutputHelper testOutputHelper)
                 .WithImage("workleap/eventgridemulator:0.6.37")
                 .WithPortBinding(EmulatorPort, assignRandomHostPort: true)
                 .WithBindMount(configurationPath, "/app/appsettings.json", AccessMode.ReadOnly)
-                .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(EmulatorPort))
+                .WithWaitStrategy(Wait.ForUnixContainer().UntilInternalTcpPortIsAvailable(EmulatorPort))
                 .Build();
         }
 
