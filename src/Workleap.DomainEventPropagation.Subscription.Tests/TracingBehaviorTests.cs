@@ -25,10 +25,11 @@ public sealed class TracingBehaviorTests : BaseUnitTest<TracingBehaviorFixture>
 
         wrapperEvent.SetMetadata("traceparent", "00-0af7651916cd43dd8448eb211c80319c-00f067aa0ba902b7-01");
         var eventGridEvent = new EventGridEvent("subject", wrapperEvent.DomainEventName, "version", wrapperEvent.ToBinaryData());
+        var eventSubscriptionContext = new DomainEventSubscriptionContext();
 
         var behaviors = this.Services.GetServices<ISubscriptionDomainEventBehavior>();
         var domainEventGridWebhookHandler = new DomainEventGridWebhookHandler(this.Services, A.Fake<IDomainEventTypeRegistry>(), NullLogger<DomainEventGridWebhookHandler>.Instance, behaviors);
-        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(eventGridEvent, CancellationToken.None);
+        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(eventGridEvent, eventSubscriptionContext, CancellationToken.None);
 
         var activityName = TracingHelper.GetEventGridEventsSubscriberActivityName(wrapperEvent.DomainEventName);
         this._activities.AssertSubscribeSuccessful(activityName);
@@ -40,11 +41,12 @@ public sealed class TracingBehaviorTests : BaseUnitTest<TracingBehaviorFixture>
         var wrapperEvent = DomainEventWrapper.Wrap(new ThrowingDomainEvent());
 
         var eventGridEvent = new EventGridEvent("subject", wrapperEvent.DomainEventName, "version", BinaryData.FromObjectAsJson(wrapperEvent));
+        var eventSubscriptionContext = new DomainEventSubscriptionContext();
 
         var behaviors = this.Services.GetServices<ISubscriptionDomainEventBehavior>();
         var domainEventGridWebhookHandler = new DomainEventGridWebhookHandler(this.Services, A.Fake<IDomainEventTypeRegistry>(), NullLogger<DomainEventGridWebhookHandler>.Instance, behaviors);
 
-        var exception = await Assert.ThrowsAsync<Exception>(async () => await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(eventGridEvent, CancellationToken.None));
+        var exception = await Assert.ThrowsAsync<Exception>(async () => await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(eventGridEvent, eventSubscriptionContext, CancellationToken.None));
 
         var activityName = TracingHelper.GetEventGridEventsSubscriberActivityName(wrapperEvent.DomainEventName);
         this._activities.AssertSubscriptionFailed(activityName, exception);

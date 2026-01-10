@@ -6,7 +6,7 @@ namespace Workleap.DomainEventPropagation;
 
 internal sealed class TracingPublishingDomainEventBehavior : IPublishingDomainEventBehavior
 {
-    public async Task HandleAsync(DomainEventWrapperCollection domainEventWrappers, DomainEventsHandlerDelegate next, CancellationToken cancellationToken)
+    public async Task HandleAsync(IDomainEventWrapperCollection domainEventWrappers, PublishingDomainEventHandlerDelegate next, CancellationToken cancellationToken)
     {
         var activityName = GetPublishingActivityName(domainEventWrappers);
 
@@ -22,11 +22,12 @@ internal sealed class TracingPublishingDomainEventBehavior : IPublishingDomainEv
         }
     }
 
-    private static async Task HandleWithTracing(DomainEventWrapperCollection domainEventWrappers, DomainEventsHandlerDelegate next, Activity activity, CancellationToken cancellationToken)
+    private static async Task HandleWithTracing(IDomainEventWrapperCollection domainEventWrappers, PublishingDomainEventHandlerDelegate next, Activity activity, CancellationToken cancellationToken)
     {
         try
         {
             InjectCurrentActivityContextDataIntoEvents(domainEventWrappers);
+            InjectEventMetadataIntoCurrentActivity(domainEventWrappers);
 
             await next(domainEventWrappers, cancellationToken).ConfigureAwait(false);
 
@@ -39,7 +40,20 @@ internal sealed class TracingPublishingDomainEventBehavior : IPublishingDomainEv
         }
     }
 
-    private static void InjectCurrentActivityContextDataIntoEvents(DomainEventWrapperCollection domainEventWrappers)
+    private static void InjectEventMetadataIntoCurrentActivity(IDomainEventWrapperCollection domainEventWrappers)
+    {
+        var activity = Activity.Current ?? default;
+        if (activity == default)
+        {
+            return;
+        }
+
+        activity.AddTag(TracingHelper.DomainEventsTypeTag, domainEventWrappers.DomainEventName);
+        activity.AddTag(TracingHelper.DomainEventsSchemaTag, domainEventWrappers.DomainSchema);
+        activity.AddTag(TracingHelper.DomainEventsCountTag, domainEventWrappers.Count);
+    }
+
+    private static void InjectCurrentActivityContextDataIntoEvents(IDomainEventWrapperCollection domainEventWrappers)
     {
         var activityContextData = GetCurrentActivityContextData();
 
@@ -77,7 +91,7 @@ internal sealed class TracingPublishingDomainEventBehavior : IPublishingDomainEv
         activityProperties[key] = value;
     }
 
-    private static string GetPublishingActivityName(DomainEventWrapperCollection domainEventWrappers) => domainEventWrappers.DomainSchema switch
+    private static string GetPublishingActivityName(IDomainEventWrapperCollection domainEventWrappers) => domainEventWrappers.DomainSchema switch
     {
         EventSchema.EventGridEvent => TracingHelper.GetEventGridEventsPublisherActivityName(domainEventWrappers.DomainEventName),
         EventSchema.CloudEvent => TracingHelper.GetCloudEventsPublisherActivityName(domainEventWrappers.DomainEventName),
