@@ -14,12 +14,12 @@ internal sealed class ApplicationInsightsSubscriptionDomainEventBehavior : ISubs
         this._telemetryClient = telemetryClient;
     }
 
-    public Task HandleAsync(DomainEventWrapper domainEventWrapper, DomainEventHandlerDelegate next, CancellationToken cancellationToken)
+    public Task HandleAsync(IDomainEventWrapper domainEventWrapper, IDomainEventSubscriptionContext subscriptionContext, SubscriptionDomainEventHandlerDelegate next, CancellationToken cancellationToken)
     {
-        return this._telemetryClient == null ? next(domainEventWrapper, cancellationToken) : this.HandleWithTelemetry(domainEventWrapper, next, cancellationToken);
+        return this._telemetryClient == null ? next(domainEventWrapper, subscriptionContext, cancellationToken) : this.HandleWithTelemetry(domainEventWrapper, subscriptionContext, next, cancellationToken);
     }
 
-    private async Task HandleWithTelemetry(DomainEventWrapper domainEventWrapper, DomainEventHandlerDelegate next, CancellationToken cancellationToken)
+    private async Task HandleWithTelemetry(IDomainEventWrapper domainEventWrapper, IDomainEventSubscriptionContext subscriptionContext, SubscriptionDomainEventHandlerDelegate next, CancellationToken cancellationToken)
     {
         var operation = this._telemetryClient!.StartActivityAwareDependencyOperation(
             domainEventWrapper.DomainEventName,
@@ -38,7 +38,7 @@ internal sealed class ApplicationInsightsSubscriptionDomainEventBehavior : ISubs
 
         try
         {
-            await next(domainEventWrapper, cancellationToken).ConfigureAwait(false);
+            await next(domainEventWrapper, subscriptionContext, cancellationToken).ConfigureAwait(false);
 
             operation.Telemetry.Success = true;
         }
@@ -68,7 +68,7 @@ internal sealed class ApplicationInsightsSubscriptionDomainEventBehavior : ISubs
         }
     }
 
-    private static void AddEventTelemetryProperties(DomainEventWrapper domainEventWrapper, IOperationHolder<DependencyTelemetry> operation)
+    private static void AddEventTelemetryProperties(IDomainEventWrapper domainEventWrapper, IOperationHolder<DependencyTelemetry> operation)
     {
         switch (domainEventWrapper.DomainEventSchema)
         {

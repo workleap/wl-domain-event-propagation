@@ -1,0 +1,8 @@
+namespace Workleap.DomainEventPropagation;
+
+public delegate Task SubscriptionDomainEventHandlerDelegate(IDomainEventWrapper domainEventWrapper, IDomainEventSubscriptionContext subscriptionContext, CancellationToken cancellationToken);
+
+public interface ISubscriptionDomainEventBehavior
+{
+    Task HandleAsync(IDomainEventWrapper domainEventWrapper, IDomainEventSubscriptionContext subscriptionContext, SubscriptionDomainEventHandlerDelegate next, CancellationToken cancellationToken);
+}

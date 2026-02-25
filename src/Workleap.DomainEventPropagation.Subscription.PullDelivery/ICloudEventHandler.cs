@@ -2,7 +2,7 @@ using Azure.Messaging;
 
 namespace Workleap.DomainEventPropagation;
 
-internal interface ICloudEventHandler
+public interface ICloudEventHandler
 {
-    Task HandleCloudEventAsync(CloudEvent cloudEvent, CancellationToken cancellationToken);
+    Task HandleCloudEventAsync(CloudEvent cloudEvent, IDomainEventSubscriptionContext subscriptionContext, CancellationToken cancellationToken);
 }

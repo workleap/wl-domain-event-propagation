@@ -18,6 +18,8 @@ Workleap.DomainEventPropagation.EventPropagationPublishingException
 Workleap.DomainEventPropagation.EventPropagationPublishingException.EventPropagationPublishingException(string! domainEventName, string! topicEndpoint, System.Exception! innerException) -> void
 Workleap.DomainEventPropagation.IEventPropagationPublisherBuilder
 Workleap.DomainEventPropagation.IEventPropagationPublisherBuilder.Services.get -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Workleap.DomainEventPropagation.IEventPropagationPublisherBuilder.AddBehavior<TBehavior>() -> Workleap.DomainEventPropagation.IEventPropagationPublisherBuilder!
+Workleap.DomainEventPropagation.IEventPropagationPublisherBuilder.AddBehavior(Workleap.DomainEventPropagation.IPublishingDomainEventBehavior! behavior) -> Workleap.DomainEventPropagation.IEventPropagationPublisherBuilder!
 Workleap.DomainEventPropagation.ServiceCollectionEventPropagationExtensions
 Workleap.DomainEventPropagation.TopicType
 Workleap.DomainEventPropagation.TopicType.Custom = 0 -> Workleap.DomainEventPropagation.TopicType

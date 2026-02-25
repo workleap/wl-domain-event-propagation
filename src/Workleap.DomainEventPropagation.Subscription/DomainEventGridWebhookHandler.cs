@@ -9,7 +9,7 @@ namespace Workleap.DomainEventPropagation;
 internal sealed class DomainEventGridWebhookHandler : BaseEventHandler, IDomainEventGridWebhookHandler
 {
     private readonly ILogger<DomainEventGridWebhookHandler> _logger;
-    private readonly DomainEventHandlerDelegate _pipeline;
+    private readonly SubscriptionDomainEventHandlerDelegate _pipeline;
 
     public DomainEventGridWebhookHandler(
         IServiceProvider serviceProvider,
@@ -19,15 +19,15 @@ internal sealed class DomainEventGridWebhookHandler : BaseEventHandler, IDomainE
         : base(serviceProvider, domainEventTypeRegistry)
     {
         this._logger = logger;
-        this._pipeline = subscriptionDomainEventBehaviors.Reverse().Aggregate((DomainEventHandlerDelegate)this.HandleDomainEventAsync, BuildPipeline);
+        this._pipeline = subscriptionDomainEventBehaviors.Reverse().Aggregate((SubscriptionDomainEventHandlerDelegate)this.HandleDomainEventAsync, BuildPipeline);
     }
 
-    private static DomainEventHandlerDelegate BuildPipeline(DomainEventHandlerDelegate next, ISubscriptionDomainEventBehavior pipeline)
+    private static SubscriptionDomainEventHandlerDelegate BuildPipeline(SubscriptionDomainEventHandlerDelegate next, ISubscriptionDomainEventBehavior pipeline)
     {
-        return (events, cancellationToken) => pipeline.HandleAsync(events, next, cancellationToken);
+        return (events, context, cancellationToken) => pipeline.HandleAsync(events, context, next, cancellationToken);
     }
 
-    public async Task HandleEventGridWebhookEventAsync(EventGridEvent eventGridEvent, CancellationToken cancellationToken)
+    public async Task HandleEventGridWebhookEventAsync(EventGridEvent eventGridEvent, IDomainEventSubscriptionContext subscriptionContext, CancellationToken cancellationToken)
     {
         // Check if it's an old Officevibe event
         if (eventGridEvent.EventType.StartsWith("Officevibe", StringComparison.Ordinal))
@@ -51,10 +51,10 @@ internal sealed class DomainEventGridWebhookHandler : BaseEventHandler, IDomainE
             return;
         }
 
-        await this._pipeline(domainEventWrapper, cancellationToken).ConfigureAwait(false);
+        await this._pipeline(domainEventWrapper, subscriptionContext, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task HandleEventGridWebhookEventAsync(CloudEvent cloudEvent, CancellationToken cancellationToken)
+    public async Task HandleEventGridWebhookEventAsync(CloudEvent cloudEvent, IDomainEventSubscriptionContext subscriptionContext, CancellationToken cancellationToken)
     {
         var domainEventWrapper = new DomainEventWrapper(cloudEvent);
 
@@ -64,10 +64,10 @@ internal sealed class DomainEventGridWebhookHandler : BaseEventHandler, IDomainE
             return;
         }
 
-        await this._pipeline(domainEventWrapper, cancellationToken).ConfigureAwait(false);
+        await this._pipeline(domainEventWrapper, subscriptionContext, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task HandleDomainEventAsync(DomainEventWrapper domainEventWrapper, CancellationToken cancellationToken)
+    private async Task HandleDomainEventAsync(IDomainEventWrapper domainEventWrapper, IDomainEventSubscriptionContext subscriptionContext, CancellationToken cancellationToken)
     {
         var handler = this.BuildHandleDomainEventAsyncMethod(domainEventWrapper, cancellationToken);
         if (handler == null)

@@ -32,6 +32,10 @@ internal static class TracingHelper
     internal const string EventgridEventsSourceTag = "eventgridevents.event_source";
     internal const string EventgridEventsTypeTag = "eventgridevents.event_type";
 
+    internal const string DomainEventsTypeTag = "domainevents.event_type";
+    internal const string DomainEventsSchemaTag = "domainevents.event_schema";
+    internal const string DomainEventsCountTag = "domainevents.event_count";
+
     private static readonly Assembly Assembly = typeof(TracingHelper).Assembly;
     private static readonly AssemblyName AssemblyName = Assembly.GetName();
     private static readonly string AssemblyVersion = Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? AssemblyName.Version!.ToString();

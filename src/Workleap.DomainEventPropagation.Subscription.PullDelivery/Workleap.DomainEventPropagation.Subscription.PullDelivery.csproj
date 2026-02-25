@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <IsPackable>true</IsPackable>
@@ -45,12 +45,12 @@
     <Compile Include="..\Shared\DomainEventWrapper.cs" Link="Shared\DomainEventWrapper.cs" />
     <Compile Include="..\Shared\BaseEventHandler.cs" Link="Shared\BaseEventHandler.cs" />
     <Compile Include="..\Shared\AssemblyHelper.cs" Link="Shared\AssemblyHelper.cs" />
-    <Compile Include="..\Shared\ISubscriptionDomainEventBehavior.cs" Link="Shared\ISubscriptionDomainEventBehavior.cs" />
     <Compile Include="..\Shared\JsonSerializerConstants.cs" Link="Shared\JsonSerializerConstants.cs" />
     <Compile Include="..\Shared\ServiceCollectionExtensions.cs" Link="Shared\ServiceCollectionExtensions.cs" />
     <Compile Include="..\Shared\LoggingExtensions.cs" Link="Shared\LoggingExtensions.cs" />
     <Compile Include="..\Shared\TracingHelper.cs" Link="Shared\TracingHelper.cs" />
     <Compile Include="..\Shared\TracingSubscriptionDomainEventBehavior.cs" Link="Shared\TracingSubscriptionDomainEventBehavior.cs" />
+    <Compile Include="..\Shared\DomainEventSubscriptionContext.cs" Link="Shared\DomainEventSubscriptionContext.cs" />
   </ItemGroup>
 
 </Project>

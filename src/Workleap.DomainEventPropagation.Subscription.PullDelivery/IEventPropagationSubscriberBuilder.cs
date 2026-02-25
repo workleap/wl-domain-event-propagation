@@ -15,4 +15,9 @@ public interface IEventPropagationSubscriberBuilder
     IEventPropagationSubscriberBuilder AddDomainEventHandler<TEvent, THandler>()
         where THandler : IDomainEventHandler<TEvent>
         where TEvent : IDomainEvent;
+
+    IEventPropagationSubscriberBuilder AddBehavior<TBehavior>()
+        where TBehavior : class, ISubscriptionDomainEventBehavior;
+
+    IEventPropagationSubscriberBuilder AddBehavior(ISubscriptionDomainEventBehavior behavior);
 }

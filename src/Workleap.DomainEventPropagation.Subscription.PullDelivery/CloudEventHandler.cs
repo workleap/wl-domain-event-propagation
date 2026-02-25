@@ -5,7 +5,7 @@ namespace Workleap.DomainEventPropagation;
 
 internal sealed class CloudEventHandler : BaseEventHandler, ICloudEventHandler
 {
-    private readonly DomainEventHandlerDelegate _pipeline;
+    private readonly SubscriptionDomainEventHandlerDelegate _pipeline;
 
     public CloudEventHandler(
         IServiceProvider serviceProvider,
@@ -13,10 +13,10 @@ internal sealed class CloudEventHandler : BaseEventHandler, ICloudEventHandler
         IEnumerable<ISubscriptionDomainEventBehavior> domainEventBehaviors)
         : base(serviceProvider, domainEventTypeRegistry)
     {
-        this._pipeline = domainEventBehaviors.Reverse().Aggregate((DomainEventHandlerDelegate)this.HandleDomainEventAsync, BuildPipeline);
+        this._pipeline = domainEventBehaviors.Reverse().Aggregate((SubscriptionDomainEventHandlerDelegate)this.HandleDomainEventAsync, BuildPipeline);
     }
 
-    public async Task HandleCloudEventAsync(CloudEvent cloudEvent, CancellationToken cancellationToken)
+    public async Task HandleCloudEventAsync(CloudEvent cloudEvent, IDomainEventSubscriptionContext subscriptionContext, CancellationToken cancellationToken)
     {
         var domainEventWrapper = WrapCloudEvent(cloudEvent);
         if (this.GetDomainEventType(domainEventWrapper.DomainEventName) == null)
@@ -24,7 +24,7 @@ internal sealed class CloudEventHandler : BaseEventHandler, ICloudEventHandler
             throw new DomainEventTypeNotRegisteredException(domainEventWrapper.DomainEventName);
         }
 
-        await this._pipeline(domainEventWrapper, cancellationToken).ConfigureAwait(false);
+        await this._pipeline(domainEventWrapper, subscriptionContext, cancellationToken).ConfigureAwait(false);
     }
 
     private static DomainEventWrapper WrapCloudEvent(CloudEvent cloudEvent)
@@ -39,13 +39,14 @@ internal sealed class CloudEventHandler : BaseEventHandler, ICloudEventHandler
         }
     }
 
-    private static DomainEventHandlerDelegate BuildPipeline(DomainEventHandlerDelegate next, ISubscriptionDomainEventBehavior behavior)
+    private static SubscriptionDomainEventHandlerDelegate BuildPipeline(SubscriptionDomainEventHandlerDelegate next, ISubscriptionDomainEventBehavior behavior)
     {
-        return (@event, cancellationToken) => behavior.HandleAsync(@event, next, cancellationToken);
+        return (@event, context, cancellationToken) => behavior.HandleAsync(@event, context, next, cancellationToken);
     }
 
     private async Task HandleDomainEventAsync(
-        DomainEventWrapper domainEventWrapper,
+        IDomainEventWrapper domainEventWrapper,
+        IDomainEventSubscriptionContext subscriptionContext,
         CancellationToken cancellationToken)
     {
         var handler = this.BuildHandleDomainEventAsyncMethod(domainEventWrapper, cancellationToken);
