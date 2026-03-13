@@ -29,17 +29,27 @@ internal sealed class EventPropagationClient : IEventPropagationClient
         IAzureClientFactory<EventGridSenderClient> eventGridClientFactory,
         IOptions<EventPropagationPublisherOptions> eventPropagationPublisherOptions,
         IEnumerable<IPublishingDomainEventBehavior> publishingDomainEventBehaviors)
+        : this(eventGridPublisherClientFactory, eventGridClientFactory, eventPropagationPublisherOptions.Value, EventPropagationPublisherOptions.EventGridClientName, publishingDomainEventBehaviors)
     {
-        this._eventPropagationPublisherOptions = eventPropagationPublisherOptions.Value;
+    }
+
+    internal EventPropagationClient(
+        IAzureClientFactory<EventGridPublisherClient> eventGridPublisherClientFactory,
+        IAzureClientFactory<EventGridSenderClient> eventGridClientFactory,
+        EventPropagationPublisherOptions options,
+        string clientName,
+        IEnumerable<IPublishingDomainEventBehavior> publishingDomainEventBehaviors)
+    {
+        this._eventPropagationPublisherOptions = options;
         this._pipeline = publishingDomainEventBehaviors.Reverse().Aggregate((DomainEventsHandlerDelegate)this.SendDomainEventsAsync, BuildPipeline);
 
         switch (this._eventPropagationPublisherOptions.TopicType)
         {
             case TopicType.Custom:
-                this._eventGridPublisherClient = eventGridPublisherClientFactory.CreateClient(EventPropagationPublisherOptions.EventGridClientName);
+                this._eventGridPublisherClient = eventGridPublisherClientFactory.CreateClient(clientName);
                 break;
             case TopicType.Namespace:
-                this._eventGridNamespaceClient = eventGridClientFactory.CreateClient(EventPropagationPublisherOptions.EventGridClientName);
+                this._eventGridNamespaceClient = eventGridClientFactory.CreateClient(clientName);
                 break;
             default:
                 throw new InvalidOperationException($"Could not create the proper event grid client for topic type {this._eventPropagationPublisherOptions.TopicType}");

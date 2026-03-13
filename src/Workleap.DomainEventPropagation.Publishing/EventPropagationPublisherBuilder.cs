@@ -12,6 +12,11 @@ namespace Workleap.DomainEventPropagation;
 
 internal sealed class EventPropagationPublisherBuilder : IEventPropagationPublisherBuilder
 {
+    public EventPropagationPublisherBuilder(IServiceCollection services)
+    {
+        this.Services = services;
+    }
+
     public EventPropagationPublisherBuilder(IServiceCollection services, Action<EventPropagationPublisherOptions> configure)
     {
         this.Services = services;
@@ -19,6 +24,43 @@ internal sealed class EventPropagationPublisherBuilder : IEventPropagationPublis
     }
 
     public IServiceCollection Services { get; }
+
+    public IEventPropagationPublisherBuilder AddTopic(string topicName)
+        => this.AddTopic(topicName, _ => { });
+
+    public IEventPropagationPublisherBuilder AddTopic(string topicName, Action<EventPropagationPublisherOptions> configureOptions)
+    {
+        if (topicName == null)
+        {
+            throw new ArgumentNullException(nameof(topicName));
+        }
+
+        if (configureOptions == null)
+        {
+            throw new ArgumentNullException(nameof(configureOptions));
+        }
+
+        this.Services.AddOptions<EventPropagationPublisherOptions>(topicName)
+            .Configure<IConfiguration>((opt, cfg) => cfg.GetSection($"{EventPropagationPublisherOptions.SectionName}:{topicName}").Bind(opt))
+            .Configure(configureOptions);
+
+        this.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<EventPropagationPublisherOptions>, EventPropagationPublisherOptionsValidator>());
+        this.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPublishingDomainEventBehavior, TracingPublishingDomainEventBehavior>());
+        this.Services.TryAddSingleton<IEventPropagationClientFactory, EventPropagationClientFactory>();
+
+        this.Services.AddAzureClients(builder =>
+        {
+            builder.AddClient<EventGridPublisherClient, EventGridPublisherClientOptions>((opts, sp) => NamedEventGridPublisherClientFactory(opts, sp, topicName))
+                .WithName(topicName)
+                .ConfigureOptions(ConfigureClientOptions);
+
+            builder.AddClient<EventGridSenderClient, EventGridSenderClientOptions>((opts, sp) => NamedEventGridClientFactory(opts, sp, topicName))
+                .WithName(topicName)
+                .ConfigureOptions(ConfigureClientOptions);
+        });
+
+        return this;
+    }
 
     private void AddRegistrations(Action<EventPropagationPublisherOptions> configure)
     {
@@ -63,6 +105,26 @@ internal sealed class EventPropagationPublisherBuilder : IEventPropagationPublis
     private static EventGridSenderClient EventGridClientFactory(EventGridSenderClientOptions clientOptions, IServiceProvider serviceProvider)
     {
         var publisherOptions = serviceProvider.GetRequiredService<IOptions<EventPropagationPublisherOptions>>().Value;
+        var topicEndpointUri = new Uri(publisherOptions.TopicEndpoint);
+
+        return publisherOptions.TokenCredential is not null
+            ? new EventGridSenderClient(topicEndpointUri, publisherOptions.TopicName, publisherOptions.TokenCredential, clientOptions)
+            : new EventGridSenderClient(topicEndpointUri, publisherOptions.TopicName, new AzureKeyCredential(publisherOptions.TopicAccessKey), clientOptions);
+    }
+
+    private static EventGridPublisherClient NamedEventGridPublisherClientFactory(EventGridPublisherClientOptions clientOptions, IServiceProvider serviceProvider, string topicName)
+    {
+        var publisherOptions = serviceProvider.GetRequiredService<IOptionsMonitor<EventPropagationPublisherOptions>>().Get(topicName);
+        var topicEndpointUri = new Uri(publisherOptions.TopicEndpoint);
+
+        return publisherOptions.TokenCredential is not null
+            ? new EventGridPublisherClient(topicEndpointUri, publisherOptions.TokenCredential, clientOptions)
+            : new EventGridPublisherClient(topicEndpointUri, new AzureKeyCredential(publisherOptions.TopicAccessKey), clientOptions);
+    }
+
+    private static EventGridSenderClient NamedEventGridClientFactory(EventGridSenderClientOptions clientOptions, IServiceProvider serviceProvider, string topicName)
+    {
+        var publisherOptions = serviceProvider.GetRequiredService<IOptionsMonitor<EventPropagationPublisherOptions>>().Get(topicName);
         var topicEndpointUri = new Uri(publisherOptions.TopicEndpoint);
 
         return publisherOptions.TokenCredential is not null

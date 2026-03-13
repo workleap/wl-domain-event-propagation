@@ -9,6 +9,8 @@ namespace Workleap.DomainEventPropagation.Publishing.Tests;
 
 public class ServiceCollectionEventPropagationExtensionsTests
 {
+#pragma warning disable CS0618 // Obsolete members used for backward compatibility testing
+
     [Fact]
     public void GivenEventPropagationConfigPresent_WhenAddEventPropagationPublisher_ThenOptionsAreSet()
     {
@@ -135,5 +137,205 @@ public class ServiceCollectionEventPropagationExtensionsTests
 
         // Then
         Assert.Equal("configure", exception.ParamName);
+    }
+
+    [Fact]
+    public void GivenExistingApi_WhenAddEventPropagationPublisher_ThenSingletonClientStillRegistered()
+    {
+        // Given
+        var inMemorySettings = new Dictionary<string, string?>
+        {
+            [$"{EventPropagationPublisherOptions.SectionName}:TopicEndpoint"] = "http://topicEndpoint.io",
+            [$"{EventPropagationPublisherOptions.SectionName}:TopicAccessKey"] = "topicAccessKey",
+        };
+
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(inMemorySettings).Build();
+        services.AddSingleton<IConfiguration>(configuration);
+
+        // When
+        services.AddEventPropagationPublisher();
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Then
+        var client = serviceProvider.GetService<IEventPropagationClient>();
+        Assert.NotNull(client);
+    }
+
+    [Fact]
+    public void GivenNullTopicName_WhenAddTopic_ThenThrowsArgumentNullException()
+    {
+        // Given
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
+        services.AddSingleton<IConfiguration>(configuration);
+        var builder = services.AddEventPropagationPublisher();
+
+        // When
+        var exception = Assert.Throws<ArgumentNullException>(() => builder.AddTopic(null!, _ => { }));
+
+        // Then
+        Assert.Equal("topicName", exception.ParamName);
+    }
+
+    [Fact]
+    public void GivenNullConfigureOptions_WhenAddTopic_ThenThrowsArgumentNullException()
+    {
+        // Given
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
+        services.AddSingleton<IConfiguration>(configuration);
+        var builder = services.AddEventPropagationPublisher();
+
+        // When
+        var exception = Assert.Throws<ArgumentNullException>(() => builder.AddTopic("Topic", null!));
+
+        // Then
+        Assert.Equal("configureOptions", exception.ParamName);
+    }
+
+#pragma warning restore CS0618
+
+    [Fact]
+    public void GivenAddTopic_WhenBuildServiceProvider_ThenNamedOptionsAreRegistered()
+    {
+        // Given
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
+        services.AddSingleton<IConfiguration>(configuration);
+
+        // When
+        services.AddEventPropagationPublishing()
+            .AddTopic("TopicA", opts =>
+            {
+                opts.TopicEndpoint = "http://topicA.io";
+                opts.TopicAccessKey = "keyA";
+            })
+            .AddTopic("TopicB", opts =>
+            {
+                opts.TopicEndpoint = "http://topicB.io";
+                opts.TopicAccessKey = "keyB";
+            });
+
+        var serviceProvider = services.BuildServiceProvider();
+        var optionsMonitor = serviceProvider.GetRequiredService<IOptionsMonitor<EventPropagationPublisherOptions>>();
+
+        // Then
+        var topicAOptions = optionsMonitor.Get("TopicA");
+        Assert.Equal("http://topicA.io", topicAOptions.TopicEndpoint);
+        Assert.Equal("keyA", topicAOptions.TopicAccessKey);
+
+        var topicBOptions = optionsMonitor.Get("TopicB");
+        Assert.Equal("http://topicB.io", topicBOptions.TopicEndpoint);
+        Assert.Equal("keyB", topicBOptions.TopicAccessKey);
+    }
+
+    [Fact]
+    public void GivenAddTopic_WhenBuildServiceProvider_ThenClientFactoryIsRegistered()
+    {
+        // Given
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
+        services.AddSingleton<IConfiguration>(configuration);
+
+        // When
+        services.AddEventPropagationPublishing()
+            .AddTopic("TopicA", opts =>
+            {
+                opts.TopicEndpoint = "http://topicA.io";
+                opts.TopicAccessKey = "keyA";
+            });
+
+        var serviceProvider = services.BuildServiceProvider();
+        var factory = serviceProvider.GetService<IEventPropagationClientFactory>();
+
+        // Then
+        Assert.NotNull(factory);
+    }
+
+    [Fact]
+    public void GivenAddTopicWithConfigSection_WhenBuildServiceProvider_ThenNamedOptionsAreBoundFromConfig()
+    {
+        // Given
+        var inMemorySettings = new Dictionary<string, string?>
+        {
+            [$"{EventPropagationPublisherOptions.SectionName}:TopicA:TopicEndpoint"] = "http://topicA.io",
+            [$"{EventPropagationPublisherOptions.SectionName}:TopicA:TopicAccessKey"] = "keyA",
+        };
+
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(inMemorySettings).Build();
+        services.AddSingleton<IConfiguration>(configuration);
+
+        // When
+        services.AddEventPropagationPublishing()
+            .AddTopic("TopicA");
+
+        var serviceProvider = services.BuildServiceProvider();
+        var optionsMonitor = serviceProvider.GetRequiredService<IOptionsMonitor<EventPropagationPublisherOptions>>();
+
+        // Then
+        var topicAOptions = optionsMonitor.Get("TopicA");
+        Assert.Equal("http://topicA.io", topicAOptions.TopicEndpoint);
+        Assert.Equal("keyA", topicAOptions.TopicAccessKey);
+    }
+
+    [Fact]
+    public void GivenNewApi_WhenAddEventPropagationPublishing_ThenClientFactoryIsRegistered()
+    {
+        // Given
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
+        services.AddSingleton<IConfiguration>(configuration);
+
+        // When
+        services.AddEventPropagationPublishing()
+            .AddTopic("TopicA", opts =>
+            {
+                opts.TopicEndpoint = "http://topicA.io";
+                opts.TopicAccessKey = "keyA";
+            });
+
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Then
+        var factory = serviceProvider.GetService<IEventPropagationClientFactory>();
+        Assert.NotNull(factory);
+    }
+
+    [Fact]
+    public void GivenNewApi_WhenAddEventPropagationPublishing_ThenSingletonClientIsNotRegistered()
+    {
+        // Given
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
+        services.AddSingleton<IConfiguration>(configuration);
+
+        // When
+        services.AddEventPropagationPublishing()
+            .AddTopic("TopicA", opts =>
+            {
+                opts.TopicEndpoint = "http://topicA.io";
+                opts.TopicAccessKey = "keyA";
+            });
+
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Then
+        var client = serviceProvider.GetService<IEventPropagationClient>();
+        Assert.Null(client);
+    }
+
+    [Fact]
+    public void GivenNullServiceCollection_WhenAddEventPropagationPublishing_ThenThrowsArgumentNullException()
+    {
+        // Given
+        var services = (IServiceCollection?)null;
+
+        // When
+        var exception = Assert.Throws<ArgumentNullException>(() => services!.AddEventPropagationPublishing());
+
+        // Then
+        Assert.Equal("services", exception.ParamName);
     }
 }
