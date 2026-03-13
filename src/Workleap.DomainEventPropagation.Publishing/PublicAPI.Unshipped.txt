@@ -1,1 +1,4 @@
 #nullable enable
+static Workleap.DomainEventPropagation.ServiceCollectionEventPropagationExtensions.AddEventPropagationPublishing(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Workleap.DomainEventPropagation.IEventPropagationPublisherBuilder!
+Workleap.DomainEventPropagation.IEventPropagationPublisherBuilder.AddTopic(string! topicName) -> Workleap.DomainEventPropagation.IEventPropagationPublisherBuilder!
+Workleap.DomainEventPropagation.IEventPropagationPublisherBuilder.AddTopic(string! topicName, System.Action<Workleap.DomainEventPropagation.EventPropagationPublisherOptions!>! configureOptions) -> Workleap.DomainEventPropagation.IEventPropagationPublisherBuilder!

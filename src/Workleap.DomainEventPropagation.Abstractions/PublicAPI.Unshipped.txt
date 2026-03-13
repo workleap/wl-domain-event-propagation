@@ -1,1 +1,3 @@
 #nullable enable
+Workleap.DomainEventPropagation.IEventPropagationClientFactory
+Workleap.DomainEventPropagation.IEventPropagationClientFactory.CreateClient(string! name) -> Workleap.DomainEventPropagation.IEventPropagationClient!
