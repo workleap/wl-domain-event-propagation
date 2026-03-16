@@ -33,7 +33,7 @@ internal abstract class BaseEventHandler
         return this._serviceProvider.GetService(domainEventHandlerType);
     }
 
-    protected Func<Task>? BuildHandleDomainEventAsyncMethod(DomainEventWrapper domainEventWrapper, CancellationToken cancellationToken)
+    protected Func<Task>? BuildHandleDomainEventAsyncMethod(IDomainEventWrapper domainEventWrapper, CancellationToken cancellationToken)
     {
         var domainEventType = this.GetDomainEventType(domainEventWrapper.DomainEventName);
         var domainEventHandlerType = this.GetDomainEventHandlerType(domainEventWrapper.DomainEventName);
@@ -49,7 +49,7 @@ internal abstract class BaseEventHandler
             return null;
         }
 
-        var domainEvent = domainEventWrapper.Unwrap(domainEventType);
+        var domainEvent = (domainEventWrapper as DomainEventWrapper)?.Unwrap(domainEventType);
 
         var domainEventHandlerMethod = GenericDomainEventHandlerMethodCache.GetOrAdd(domainEventHandlerType, type =>
         {
