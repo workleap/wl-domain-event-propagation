@@ -48,5 +48,7 @@
     <Compile Include="..\Shared\ServiceCollectionExtensions.cs" Link="Shared\ServiceCollectionExtensions.cs" />
     <Compile Include="..\Shared\LoggingExtensions.cs" Link="Shared\LoggingExtensions.cs" />
     <Compile Include="..\Shared\TracingSubscriptionDomainEventBehavior.cs" Link="Shared\TracingSubscriptionDomainEventBehavior.cs" />
+    <Compile Include="..\Shared\DomainEventContext.cs" Link="Shared\DomainEventContext.cs" />
+    <Compile Include="..\Shared\DomainEventContextBehavior.cs" Link="Shared\DomainEventContextBehavior.cs" />
   </ItemGroup>
 </Project>

@@ -26,7 +26,12 @@ internal sealed class EventPropagationSubscriberBuilder : IEventPropagationSubsc
         this.Services.TryAddSingleton<IDomainEventTypeRegistry>(this._domainEventTypeRegistry);
         this.Services.AddTransient<IEventGridClientWrapperFactory, EventGridClientAdapterFactory>();
         this.Services.AddTransient<ICloudEventHandler, CloudEventHandler>();
+        this.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ISubscriptionDomainEventBehavior, DomainEventContextBehavior>());
         this.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ISubscriptionDomainEventBehavior, TracingSubscriptionDomainEventBehavior>());
+
+        this.Services.TryAddTransient<IDomainEventContext>(_ =>
+            DomainEventContext.Current
+            ?? throw new InvalidOperationException("IDomainEventContext is only available within a domain event handler pipeline."));
         this.Services.AddHostedService<EventPullerService>();
     }
 

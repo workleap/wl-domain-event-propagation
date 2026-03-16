@@ -1,3 +1,8 @@
 #nullable enable
 Workleap.DomainEventPropagation.IEventPropagationClientFactory
+Workleap.DomainEventPropagation.IDomainEventContext
+Workleap.DomainEventPropagation.IDomainEventContext.DomainEventName.get -> string!
+Workleap.DomainEventPropagation.IDomainEventContext.EventSchema.get -> Workleap.DomainEventPropagation.EventSchema
+Workleap.DomainEventPropagation.IDomainEventContext.Id.get -> string?
+Workleap.DomainEventPropagation.IDomainEventContext.Source.get -> string?
 Workleap.DomainEventPropagation.IEventPropagationClientFactory.CreateClient(string! name) -> Workleap.DomainEventPropagation.IEventPropagationClient!

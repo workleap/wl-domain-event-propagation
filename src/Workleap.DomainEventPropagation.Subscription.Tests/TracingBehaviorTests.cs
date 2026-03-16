@@ -55,7 +55,8 @@ public sealed class TracingBehaviorTests : BaseUnitTest<TracingBehaviorFixture>
     {
         var subscriptionBehaviors = this.Services.GetServices<ISubscriptionDomainEventBehavior>().ToArray();
 
-        Assert.IsType<TracingSubscriptionDomainEventBehavior>(subscriptionBehaviors[0]);
-        Assert.IsType<ApplicationInsightsSubscriptionDomainEventBehavior>(subscriptionBehaviors[1]);
+        Assert.IsType<DomainEventContextBehavior>(subscriptionBehaviors[0]);
+        Assert.IsType<TracingSubscriptionDomainEventBehavior>(subscriptionBehaviors[1]);
+        Assert.IsType<ApplicationInsightsSubscriptionDomainEventBehavior>(subscriptionBehaviors[2]);
     }
 }

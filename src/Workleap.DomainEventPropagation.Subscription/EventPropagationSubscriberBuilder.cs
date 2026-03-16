@@ -21,7 +21,12 @@ internal sealed class EventPropagationSubscriberBuilder : IEventPropagationSubsc
         services.TryAddSingleton<IDomainEventGridWebhookHandler, DomainEventGridWebhookHandler>();
         services.TryAddSingleton<IEventGridRequestHandler, EventGridRequestHandler>();
 
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<ISubscriptionDomainEventBehavior, DomainEventContextBehavior>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ISubscriptionDomainEventBehavior, TracingSubscriptionDomainEventBehavior>());
+
+        services.TryAddTransient<IDomainEventContext>(_ =>
+            DomainEventContext.Current
+            ?? throw new InvalidOperationException("IDomainEventContext is only available within a domain event handler pipeline."));
 
         services.TryAddSingleton<IDomainEventTypeRegistry>(this._domainEventTypeRegistry);
     }
