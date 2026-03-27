@@ -20,6 +20,24 @@ public class DomainEventWrapperTests
         new CloudEventSampleDomainEvent());
 
     [Fact]
+    public void GivenEventGridEvent_WhenSetData_ThenDataIsSet()
+    {
+        // Given
+        var eventWrapper = new DomainEventWrapper(this._eventGridEvent);
+
+        // When
+        eventWrapper.SetData("someKey", "someValue");
+
+        // Then
+        var valueFound = eventWrapper.TryGetData("someKey", out var value);
+        var metadataValueFound = eventWrapper.TryGetMetadata("someKey", out _);
+
+        Assert.True(valueFound);
+        Assert.Equal("someValue", value);
+        Assert.False(metadataValueFound);
+    }
+
+    [Fact]
     public void GivenEventGridEvent_WhenSetMetadata_ThenMetadataIsSet()
     {
         // Given
@@ -29,10 +47,30 @@ public class DomainEventWrapperTests
         eventWrapper.SetMetadata("someKey", "someValue");
 
         // Then
-        var valueFound = eventWrapper.TryGetMetadata("someKey", out var value);
+        var valueFound = eventWrapper.TryGetData("someKey", out _);
+        var metadataValueFound = eventWrapper.TryGetMetadata("someKey", out var value);
+
+        Assert.True(metadataValueFound);
+        Assert.Equal("someValue", value);
+        Assert.False(valueFound);
+    }
+
+    [Fact]
+    public void GivenCloudEvent_WhenSetData_ThenDataIsSet()
+    {
+        // Given
+        var eventWrapper = new DomainEventWrapper(this._cloudEvent);
+
+        // When
+        eventWrapper.SetData("someKey", "someValue");
+
+        // Then
+        var valueFound = eventWrapper.TryGetData("someKey", out var value);
+        var metadataValueFound = eventWrapper.TryGetMetadata("someKey", out _);
 
         Assert.True(valueFound);
         Assert.Equal("someValue", value);
+        Assert.False(metadataValueFound);
     }
 
     [Fact]
@@ -45,9 +83,26 @@ public class DomainEventWrapperTests
         eventWrapper.SetMetadata("someKey", "someValue");
 
         // Then
-        var valueFound = eventWrapper.TryGetMetadata("someKey", out var value);
-        Assert.True(valueFound);
+        var valueFound = eventWrapper.TryGetData("someKey", out _);
+        var metadataValueFound = eventWrapper.TryGetMetadata("someKey", out var value);
+
+        Assert.True(metadataValueFound);
         Assert.Equal("someValue", value);
+        Assert.False(valueFound);
+    }
+
+    [Fact]
+    public void GivenEventGridEventWithoutMetadata_WhenTryGetData_ThenDataNotFound()
+    {
+        // Given
+        var eventWrapper = new DomainEventWrapper(this._eventGridEvent);
+
+        // When
+        var valueFound = eventWrapper.TryGetData("somekey", out var value);
+
+        // Then
+        Assert.False(valueFound);
+        Assert.Null(value);
     }
 
     [Fact]
@@ -58,6 +113,20 @@ public class DomainEventWrapperTests
 
         // When
         var valueFound = eventWrapper.TryGetMetadata("somekey", out var value);
+
+        // Then
+        Assert.False(valueFound);
+        Assert.Null(value);
+    }
+
+    [Fact]
+    public void GivenCloudEventWithoutMetadata_WhenTryGetData_ThenDataNotFound()
+    {
+        // Given
+        var eventWrapper = new DomainEventWrapper(this._cloudEvent);
+
+        // When
+        var valueFound = eventWrapper.TryGetData("somekey", out var value);
 
         // Then
         Assert.False(valueFound);

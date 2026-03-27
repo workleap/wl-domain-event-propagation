@@ -2,16 +2,17 @@ using System.Collections;
 
 namespace Workleap.DomainEventPropagation;
 
-internal sealed class DomainEventWrapperCollection : IReadOnlyCollection<DomainEventWrapper>
+internal sealed class DomainEventWrapperCollection : IDomainEventWrapperCollection
 {
-    private readonly DomainEventWrapper[] _domainEventWrappers;
+    private readonly IDomainEventWrapper[] _domainEventWrappers;
+    private readonly List<Action<IDomainEventMetadata>> _configureDomainEventMetadataActions;
 
-    private DomainEventWrapperCollection(IEnumerable<DomainEventWrapper> domainEventWrappers, Action<IDomainEventMetadata>? configureDomainEventMetadata, string domainEventName, EventSchema schema)
+    private DomainEventWrapperCollection(IEnumerable<IDomainEventWrapper> domainEventWrappers, Action<IDomainEventMetadata>? configureDomainEventMetadata, string domainEventName, EventSchema schema)
     {
         this._domainEventWrappers = domainEventWrappers.ToArray();
         this.DomainEventName = domainEventName;
         this.DomainSchema = schema;
-        this.ConfigureDomainEventMetadata = configureDomainEventMetadata;
+        this._configureDomainEventMetadataActions = configureDomainEventMetadata != null ? [configureDomainEventMetadata] : [];
     }
 
     public int Count => this._domainEventWrappers.Length;
@@ -20,7 +21,17 @@ internal sealed class DomainEventWrapperCollection : IReadOnlyCollection<DomainE
 
     public EventSchema DomainSchema { get; }
 
-    public Action<IDomainEventMetadata>? ConfigureDomainEventMetadata { get; }
+    public IEnumerable<Action<IDomainEventMetadata>> ConfigureDomainEventMetadataActions => this._configureDomainEventMetadataActions.AsReadOnly();
+
+    public void AddConfigureDomainEventMetadataAction(Action<IDomainEventMetadata> configureDomainEventMetadata)
+    {
+        if (this.DomainSchema != EventSchema.CloudEvent)
+        {
+            throw new NotSupportedException("Domain event configuration is only supported for CloudEvents");
+        }
+
+        this._configureDomainEventMetadataActions.Add(configureDomainEventMetadata);
+    }
 
     public static DomainEventWrapperCollection Create<T>(IEnumerable<T> domainEvents, Action<IDomainEventMetadata>? configureDomainEventMetadata)
         where T : IDomainEvent
@@ -30,10 +41,10 @@ internal sealed class DomainEventWrapperCollection : IReadOnlyCollection<DomainE
         return new DomainEventWrapperCollection(domainEventWrappers, configureDomainEventMetadata, DomainEventNameCache.GetName<T>(), DomainEventSchemaCache.GetEventSchema<T>());
     }
 
-    public IEnumerator<DomainEventWrapper> GetEnumerator()
+    public IEnumerator<IDomainEventWrapper> GetEnumerator()
     {
         // See https://stackoverflow.com/questions/1272673/obtain-generic-enumerator-from-an-array
-        return ((IEnumerable<DomainEventWrapper>)this._domainEventWrappers).GetEnumerator();
+        return ((IEnumerable<IDomainEventWrapper>)this._domainEventWrappers).GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()
