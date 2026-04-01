@@ -17,7 +17,7 @@ internal sealed class EventGridRequestHandler : IEventGridRequestHandler
         this._subscriptionEventGridWebhookHandler = subscriptionEventGridWebhookHandler;
     }
 
-    public async Task<EventGridRequestResult> HandleRequestAsync(EventGridEvent[] eventGridEvents, CancellationToken cancellationToken)
+    public async Task<EventGridRequestResult> HandleRequestAsync(EventGridEvent[] eventGridEvents, IDomainEventSubscriptionContext subscriptionContext, CancellationToken cancellationToken)
     {
         foreach (var eventGridEvent in eventGridEvents)
         {
@@ -33,14 +33,14 @@ internal sealed class EventGridRequestHandler : IEventGridRequestHandler
 
             if (!string.IsNullOrEmpty(eventGridEvent.Topic))
             {
-                await this.ProcessDomainEventAsync(eventGridEvent, cancellationToken).ConfigureAwait(false);
+                await this.ProcessDomainEventAsync(eventGridEvent, subscriptionContext, cancellationToken).ConfigureAwait(false);
             }
         }
 
         return new EventGridRequestResult(EventGridRequestType.Event);
     }
 
-    public async Task<EventGridRequestResult> HandleRequestAsync(CloudEvent[] cloudEvents, CancellationToken cancellationToken)
+    public async Task<EventGridRequestResult> HandleRequestAsync(CloudEvent[] cloudEvents, IDomainEventSubscriptionContext subscriptionContext, CancellationToken cancellationToken)
     {
         foreach (var cloudEvent in cloudEvents)
         {
@@ -56,7 +56,7 @@ internal sealed class EventGridRequestHandler : IEventGridRequestHandler
 
             if (!string.IsNullOrEmpty(cloudEvent.Source))
             {
-                await this.ProcessDomainEventAsync(cloudEvent, cancellationToken).ConfigureAwait(false);
+                await this.ProcessDomainEventAsync(cloudEvent, subscriptionContext, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -71,13 +71,13 @@ internal sealed class EventGridRequestHandler : IEventGridRequestHandler
     }
 
     // Events that our services send
-    private async Task ProcessDomainEventAsync(EventGridEvent eventGridEvent, CancellationToken cancellationToken)
+    private async Task ProcessDomainEventAsync(EventGridEvent eventGridEvent, IDomainEventSubscriptionContext subscriptionContext, CancellationToken cancellationToken)
     {
-        await this._domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(eventGridEvent, cancellationToken).ConfigureAwait(false);
+        await this._domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(eventGridEvent, subscriptionContext, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task ProcessDomainEventAsync(CloudEvent cloudEvent, CancellationToken cancellationToken)
+    private async Task ProcessDomainEventAsync(CloudEvent cloudEvent, IDomainEventSubscriptionContext subscriptionContext, CancellationToken cancellationToken)
     {
-        await this._domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(cloudEvent, cancellationToken).ConfigureAwait(false);
+        await this._domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(cloudEvent, subscriptionContext, cancellationToken).ConfigureAwait(false);
     }
 }

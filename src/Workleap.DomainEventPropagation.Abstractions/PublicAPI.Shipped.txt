@@ -25,8 +25,33 @@ Workleap.DomainEventPropagation.IDomainEventMetadata.Time.get -> System.DateTime
 Workleap.DomainEventPropagation.IDomainEventMetadata.Time.set -> void
 Workleap.DomainEventPropagation.IDomainEventMetadata.Type.get -> string!
 Workleap.DomainEventPropagation.IDomainEventMetadata.Type.set -> void
+Workleap.DomainEventPropagation.IDomainEventSubscriptionContext
+Workleap.DomainEventPropagation.IDomainEventSubscriptionContext.AttemptCount.get -> int
+Workleap.DomainEventPropagation.IDomainEventSubscriptionContext.MaxAttempts.get -> int
+Workleap.DomainEventPropagation.IDomainEventWrapper
+Workleap.DomainEventPropagation.IDomainEventWrapper.Id.get -> string?
+Workleap.DomainEventPropagation.IDomainEventWrapper.Source.get -> string?
+Workleap.DomainEventPropagation.IDomainEventWrapper.DomainEventName.get -> string!
+Workleap.DomainEventPropagation.IDomainEventWrapper.DomainEventSchema.get -> Workleap.DomainEventPropagation.EventSchema
+Workleap.DomainEventPropagation.IDomainEventWrapper.SetData(string! key, string! value) -> void
+Workleap.DomainEventPropagation.IDomainEventWrapper.SetMetadata(string! key, string! value) -> void
+Workleap.DomainEventPropagation.IDomainEventWrapper.TryGetData(string! key, out string? value) -> bool
+Workleap.DomainEventPropagation.IDomainEventWrapper.TryGetMetadata(string! key, out string? value) -> bool
+Workleap.DomainEventPropagation.IDomainEventWrapperCollection
+Workleap.DomainEventPropagation.IDomainEventWrapperCollection.DomainEventName.get -> string!
+Workleap.DomainEventPropagation.IDomainEventWrapperCollection.DomainSchema.get -> Workleap.DomainEventPropagation.EventSchema
+Workleap.DomainEventPropagation.IDomainEventWrapperCollection.ConfigureDomainEventMetadataActions.get -> System.Collections.Generic.IEnumerable<System.Action<Workleap.DomainEventPropagation.IDomainEventMetadata!>!>!
+Workleap.DomainEventPropagation.IDomainEventWrapperCollection.AddConfigureDomainEventMetadataAction(System.Action<Workleap.DomainEventPropagation.IDomainEventMetadata!>! configureDomainEventMetadata) -> void
 Workleap.DomainEventPropagation.IEventPropagationClient
 Workleap.DomainEventPropagation.IEventPropagationClient.PublishDomainEventAsync<T>(T domainEvent, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 Workleap.DomainEventPropagation.IEventPropagationClient.PublishDomainEventAsync<T>(T domainEvent, System.Action<Workleap.DomainEventPropagation.IDomainEventMetadata!>! configureDomainEventMetadata, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 Workleap.DomainEventPropagation.IEventPropagationClient.PublishDomainEventsAsync<T>(System.Collections.Generic.IEnumerable<T>! domainEvents, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 Workleap.DomainEventPropagation.IEventPropagationClient.PublishDomainEventsAsync<T>(System.Collections.Generic.IEnumerable<T>! domainEvents, System.Action<Workleap.DomainEventPropagation.IDomainEventMetadata!>! configureDomainEventMetadata, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Workleap.DomainEventPropagation.IPublishingDomainEventBehavior
+Workleap.DomainEventPropagation.IPublishingDomainEventBehavior.HandleAsync(Workleap.DomainEventPropagation.IDomainEventWrapperCollection! domainEventWrappers, Workleap.DomainEventPropagation.PublishingDomainEventHandlerDelegate! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Workleap.DomainEventPropagation.ISubscriptionDomainEventBehavior
+Workleap.DomainEventPropagation.ISubscriptionDomainEventBehavior.HandleAsync(Workleap.DomainEventPropagation.IDomainEventWrapper! domainEventWrapper, Workleap.DomainEventPropagation.IDomainEventSubscriptionContext! subscriptionContext, Workleap.DomainEventPropagation.SubscriptionDomainEventHandlerDelegate! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Workleap.DomainEventPropagation.PublishingDomainEventHandlerDelegate
+virtual Workleap.DomainEventPropagation.PublishingDomainEventHandlerDelegate.Invoke(Workleap.DomainEventPropagation.IDomainEventWrapperCollection! domainEventWrappers, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Workleap.DomainEventPropagation.SubscriptionDomainEventHandlerDelegate
+virtual Workleap.DomainEventPropagation.SubscriptionDomainEventHandlerDelegate.Invoke(Workleap.DomainEventPropagation.IDomainEventWrapper! domainEventWrapper, Workleap.DomainEventPropagation.IDomainEventSubscriptionContext! subscriptionContext, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!

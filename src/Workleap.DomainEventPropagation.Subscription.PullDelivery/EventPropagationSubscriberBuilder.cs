@@ -100,6 +100,19 @@ internal sealed class EventPropagationSubscriberBuilder : IEventPropagationSubsc
         return this;
     }
 
+    public IEventPropagationSubscriberBuilder AddBehavior<TBehavior>()
+        where TBehavior : class, ISubscriptionDomainEventBehavior
+    {
+        this.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ISubscriptionDomainEventBehavior, TBehavior>());
+        return this;
+    }
+
+    public IEventPropagationSubscriberBuilder AddBehavior(ISubscriptionDomainEventBehavior behavior)
+    {
+        this.Services.TryAddEnumerable(ServiceDescriptor.Singleton(behavior));
+        return this;
+    }
+
     private static void BindFromWellKnownConfigurationSection(EventPropagationSubscriptionOptions options, IConfiguration configuration, string optionsSectionName)
     {
         var section = configuration.GetSection(optionsSectionName);

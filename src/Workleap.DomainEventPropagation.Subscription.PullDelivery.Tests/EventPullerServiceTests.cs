@@ -307,7 +307,7 @@ public class EventPullerServiceTests : IDisposable
     private void GivenClientFailsHandlingEvents(EventPullerClient client, Exception? exception = null)
     {
         exception ??= new Exception("Unhandled exception");
-        A.CallTo(() => client.EventHandler.HandleCloudEventAsync(A<CloudEvent>._, A<CancellationToken>._)).Throws(exception);
+        A.CallTo(() => client.EventHandler.HandleCloudEventAsync(A<CloudEvent>._, A<DomainEventSubscriptionContext>._, A<CancellationToken>._)).Throws(exception);
     }
 
     private async Task WhenRunningPullerService()
@@ -347,7 +347,7 @@ public class EventPullerServiceTests : IDisposable
     {
         foreach (var eventBundle in events)
         {
-            A.CallTo(() => client.EventHandler.HandleCloudEventAsync(eventBundle.Event, A<CancellationToken>._)).MustHaveHappenedOnceOrMore();
+            A.CallTo(() => client.EventHandler.HandleCloudEventAsync(eventBundle.Event, A<DomainEventSubscriptionContext>.That.Matches(x => x.AttemptCount == eventBundle.DeliveryCount && x.MaxAttempts == this._optionsMonitor.CurrentValue.MaxRetries), A<CancellationToken>._)).MustHaveHappenedOnceOrMore();
         }
     }
 

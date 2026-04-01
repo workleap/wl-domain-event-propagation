@@ -18,6 +18,7 @@ public class DomainEventGridWebhookHandlerTests
 
     private readonly EventGridEvent _eventGridEvent = new EventGridEvent("subject", DomainEvent.DomainEventName, "1.0", BinaryData.FromObjectAsJson(DomainEvent));
     private readonly CloudEvent _cloudEvent = new CloudEvent("source", DomainEvent.DomainEventName, DomainEvent);
+    private readonly IDomainEventSubscriptionContext _subscriptionContext = A.Fake<IDomainEventSubscriptionContext>();
 
     [Fact]
     public async Task GivenEventGridDomainEventIsFired_WhenDomainEventTypeUnknown_ThenDomainEventIsIgnored()
@@ -32,7 +33,7 @@ public class DomainEventGridWebhookHandlerTests
             this._logger,
             Array.Empty<ISubscriptionDomainEventBehavior>());
 
-        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, CancellationToken.None);
+        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, this._subscriptionContext, CancellationToken.None);
 
         // Then
         A.CallTo(() => this._domainEventHandler.HandleDomainEventAsync(A<TestDomainEvent>._, A<CancellationToken>._)).MustNotHaveHappened();
@@ -51,7 +52,7 @@ public class DomainEventGridWebhookHandlerTests
             this._logger,
             Array.Empty<ISubscriptionDomainEventBehavior>());
 
-        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._cloudEvent, CancellationToken.None);
+        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._cloudEvent, this._subscriptionContext, CancellationToken.None);
 
         // Then
         A.CallTo(() => this._domainEventHandler.HandleDomainEventAsync(A<TestDomainEvent>._, A<CancellationToken>._)).MustNotHaveHappened();
@@ -70,7 +71,7 @@ public class DomainEventGridWebhookHandlerTests
             this._logger,
             Array.Empty<ISubscriptionDomainEventBehavior>());
 
-        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, CancellationToken.None);
+        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, this._subscriptionContext, CancellationToken.None);
 
         // Then
         A.CallTo(() => this._domainEventHandler.HandleDomainEventAsync(A<TestDomainEvent>._, A<CancellationToken>._)).MustNotHaveHappened();
@@ -89,7 +90,7 @@ public class DomainEventGridWebhookHandlerTests
             this._logger,
             Array.Empty<ISubscriptionDomainEventBehavior>());
 
-        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._cloudEvent, CancellationToken.None);
+        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._cloudEvent, this._subscriptionContext, CancellationToken.None);
 
         // Then
         A.CallTo(() => this._domainEventHandler.HandleDomainEventAsync(A<TestDomainEvent>._, A<CancellationToken>._)).MustNotHaveHappened();
@@ -109,7 +110,7 @@ public class DomainEventGridWebhookHandlerTests
             this._logger,
             Array.Empty<ISubscriptionDomainEventBehavior>());
 
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, this._subscriptionContext, CancellationToken.None));
 
         // Then
         A.CallTo(() => this._domainEventHandler.HandleDomainEventAsync(A<TestDomainEvent>._, A<CancellationToken>._)).MustNotHaveHappened();
@@ -129,7 +130,7 @@ public class DomainEventGridWebhookHandlerTests
             this._logger,
             Array.Empty<ISubscriptionDomainEventBehavior>());
 
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._cloudEvent, CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._cloudEvent, this._subscriptionContext, CancellationToken.None));
 
         // Then
         A.CallTo(() => this._domainEventHandler.HandleDomainEventAsync(A<TestDomainEvent>._, A<CancellationToken>._)).MustNotHaveHappened();
@@ -150,7 +151,7 @@ public class DomainEventGridWebhookHandlerTests
             this._logger,
             Array.Empty<ISubscriptionDomainEventBehavior>());
 
-        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, CancellationToken.None);
+        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, this._subscriptionContext, CancellationToken.None);
 
         // Then
         A.CallTo(() => this._domainEventHandler.HandleDomainEventAsync(A<TestDomainEvent>._, A<CancellationToken>._)).MustHaveHappenedOnceExactly();
@@ -171,7 +172,7 @@ public class DomainEventGridWebhookHandlerTests
             this._logger,
             Array.Empty<ISubscriptionDomainEventBehavior>());
 
-        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._cloudEvent, CancellationToken.None);
+        await domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(this._cloudEvent, this._subscriptionContext, CancellationToken.None);
 
         // Then
         A.CallTo(() => this._domainEventHandler.HandleDomainEventAsync(A<TestDomainEvent>._, A<CancellationToken>._)).MustHaveHappenedOnceExactly();
@@ -229,10 +230,10 @@ public class DomainEventGridWebhookHandlerTests
         // When
         var webhookHandler = new DomainEventGridWebhookHandler(serviceProvider, A.Fake<IDomainEventTypeRegistry>(), NullLogger<DomainEventGridWebhookHandler>.Instance, new[] { subscriberBehavior });
 
-        await webhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, CancellationToken.None);
+        await webhookHandler.HandleEventGridWebhookEventAsync(this._eventGridEvent, this._subscriptionContext, CancellationToken.None);
 
         // Then
-        A.CallTo(() => subscriberBehavior.HandleAsync(A<DomainEventWrapper>._, A<DomainEventHandlerDelegate>._, A<CancellationToken>._)).MustHaveHappened();
+        A.CallTo(() => subscriberBehavior.HandleAsync(A<DomainEventWrapper>._, this._subscriptionContext, A<SubscriptionDomainEventHandlerDelegate>._, A<CancellationToken>._)).MustHaveHappened();
     }
 
     [Fact]
@@ -250,10 +251,10 @@ public class DomainEventGridWebhookHandlerTests
         // When
         var webhookHandler = new DomainEventGridWebhookHandler(serviceProvider, A.Fake<IDomainEventTypeRegistry>(), NullLogger<DomainEventGridWebhookHandler>.Instance, new[] { subscriberBehavior });
 
-        await webhookHandler.HandleEventGridWebhookEventAsync(this._cloudEvent, CancellationToken.None);
+        await webhookHandler.HandleEventGridWebhookEventAsync(this._cloudEvent, this._subscriptionContext, CancellationToken.None);
 
         // Then
-        A.CallTo(() => subscriberBehavior.HandleAsync(A<DomainEventWrapper>._, A<DomainEventHandlerDelegate>._, A<CancellationToken>._)).MustHaveHappened();
+        A.CallTo(() => subscriberBehavior.HandleAsync(A<DomainEventWrapper>._, this._subscriptionContext, A<SubscriptionDomainEventHandlerDelegate>._, A<CancellationToken>._)).MustHaveHappened();
     }
 
     [DomainEvent("test")]

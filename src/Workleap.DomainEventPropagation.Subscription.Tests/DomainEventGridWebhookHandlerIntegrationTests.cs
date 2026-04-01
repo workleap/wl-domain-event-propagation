@@ -18,6 +18,8 @@ public sealed class DomainEventGridWebhookHandlerIntegrationTests :
         OfficevibeDate = DateTime.UtcNow,
     };
 
+    private static readonly IDomainEventSubscriptionContext DomainEventSubscriptionContext = new DomainEventSubscriptionContext();
+
     public DomainEventGridWebhookHandlerIntegrationTests(OfficevibeSubscriptionMigrationFixture fixture, ITestOutputHelper testOutputHelper) : base(fixture, testOutputHelper)
     {
     }
@@ -37,7 +39,7 @@ public sealed class DomainEventGridWebhookHandlerIntegrationTests :
         var webhookHandler = this.Services.GetRequiredService<IDomainEventGridWebhookHandler>();
 
         // When
-        await webhookHandler.HandleEventGridWebhookEventAsync(eventGridEvent, CancellationToken.None);
+        await webhookHandler.HandleEventGridWebhookEventAsync(eventGridEvent, DomainEventSubscriptionContext, CancellationToken.None);
         var testState = this.Services.GetRequiredService<DomainEventGridWebhookHandlerTestState>();
 
         // Then
@@ -60,7 +62,7 @@ public sealed class DomainEventGridWebhookHandlerIntegrationTests :
         var webhookHandler = this.Services.GetRequiredService<IDomainEventGridWebhookHandler>();
 
         // When
-        await webhookHandler.HandleEventGridWebhookEventAsync(eventGridEvent, CancellationToken.None);
+        await webhookHandler.HandleEventGridWebhookEventAsync(eventGridEvent, DomainEventSubscriptionContext, CancellationToken.None);
         var testState = this.Services.GetRequiredService<DomainEventGridWebhookHandlerTestState>();
 
         // Then

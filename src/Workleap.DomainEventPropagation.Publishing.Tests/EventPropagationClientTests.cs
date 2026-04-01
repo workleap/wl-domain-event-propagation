@@ -78,7 +78,7 @@ public abstract class EventPropagationClientTests
         await propagationClient.PublishDomainEventAsync(domainEvent, CancellationToken.None);
 
         // Then
-        A.CallTo(() => publisherBehavior.HandleAsync(A<DomainEventWrapperCollection>._, A<DomainEventsHandlerDelegate>._, A<CancellationToken>._)).MustHaveHappened();
+        A.CallTo(() => publisherBehavior.HandleAsync(A<DomainEventWrapperCollection>._, A<PublishingDomainEventHandlerDelegate>._, A<CancellationToken>._)).MustHaveHappened();
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public abstract class EventPropagationClientTests
         await propagationClient.PublishDomainEventAsync(domainEvent, CancellationToken.None);
 
         // Then
-        A.CallTo(() => publisherBehavior.HandleAsync(A<DomainEventWrapperCollection>._, A<DomainEventsHandlerDelegate>._, A<CancellationToken>._)).MustHaveHappened();
+        A.CallTo(() => publisherBehavior.HandleAsync(A<DomainEventWrapperCollection>._, A<PublishingDomainEventHandlerDelegate>._, A<CancellationToken>._)).MustHaveHappened();
     }
 
     protected static bool IsSingleEventGridEvent(IEnumerable<EventGridEvent> events)
@@ -331,6 +331,24 @@ public class EventPropagationClientForNamespaceTopicTests() : EventPropagationCl
     }
 
     [Fact]
+    public async Task GivenCloudEvent_WhenPublishEventWithMultipleMetadataConfiguration_ThenCallsConfigurationBeforePropagationClient()
+    {
+        // Given
+        var domainEvent = new TestCloudEvent { Text = "Hello world", Number = 1 };
+
+        var eventPropagationClient = new EventPropagationClient(this.EventGridPublisherClientFactory, this.EventGridClientFactory, PublisherOptions, [new TestExtraActionBehavior()]);
+
+        // When
+        await eventPropagationClient.PublishDomainEventAsync(domainEvent, x => x.Subject = "Test subject", CancellationToken.None);
+
+        // Then
+        A.CallTo(() => this.EventGridClient.SendAsync(
+                A<IEnumerable<CloudEvent>>.That.Matches(events => IsSingleCloudEvent(events) && events.First().Subject == "Test subject" && events.First().ExtensionAttributes.ContainsKey("extra") && events.First().ExtensionAttributes["extra"] == "action"),
+                A<CancellationToken>._))
+            .MustHaveHappened();
+    }
+
+    [Fact]
     public async Task GivenCloudEvent_WhenErrorDuringPublishEvent_ThenThrowsException()
     {
         // Given
@@ -342,5 +360,15 @@ public class EventPropagationClientForNamespaceTopicTests() : EventPropagationCl
 
         // Then
         Assert.Contains(CloudEventName, exception.Message);
+    }
+
+    public class TestExtraActionBehavior : IPublishingDomainEventBehavior
+    {
+        public Task HandleAsync(IDomainEventWrapperCollection domainEventWrappers, PublishingDomainEventHandlerDelegate next, CancellationToken cancellationToken)
+        {
+            domainEventWrappers.AddConfigureDomainEventMetadataAction(x => x.ExtensionAttributes.Add("extra", "action"));
+
+            return next(domainEventWrappers, cancellationToken);
+        }
     }
 }

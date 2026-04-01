@@ -7,6 +7,8 @@ namespace Workleap.DomainEventPropagation.Subscription.Tests;
 
 public class EventGridRequestHandlerTests
 {
+    private readonly IDomainEventSubscriptionContext _subscriptionContext = A.Fake<IDomainEventSubscriptionContext>();
+
     [Fact]
     public async Task GivenSubscriptionEventGridRequest_WhenRequestContentValid_ThenAcceptResponseIsGenerated()
     {
@@ -25,7 +27,7 @@ public class EventGridRequestHandlerTests
 
         var request = GetEventGridSubscriptionRequest(validationCode);
 
-        var result = await eventGridRequestHandler.HandleRequestAsync(request, CancellationToken.None);
+        var result = await eventGridRequestHandler.HandleRequestAsync(request, this._subscriptionContext, CancellationToken.None);
 
         // Then
         Assert.NotNull(result);
@@ -52,7 +54,7 @@ public class EventGridRequestHandlerTests
 
         var request = GetCloudEventSubscriptionRequest(validationCode);
 
-        var result = await eventGridRequestHandler.HandleRequestAsync(request, CancellationToken.None);
+        var result = await eventGridRequestHandler.HandleRequestAsync(request, this._subscriptionContext, CancellationToken.None);
 
         // Then
         Assert.NotNull(result);
@@ -81,7 +83,7 @@ public class EventGridRequestHandlerTests
 
         var exception = await Assert.ThrowsAsync<Exception>(() =>
         {
-            return eventGridRequestHandler.HandleRequestAsync(request, CancellationToken.None);
+            return eventGridRequestHandler.HandleRequestAsync(request, this._subscriptionContext, CancellationToken.None);
         });
 
         // Then
@@ -108,7 +110,7 @@ public class EventGridRequestHandlerTests
 
         var exception = await Assert.ThrowsAsync<Exception>(() =>
         {
-            return eventGridRequestHandler.HandleRequestAsync(request, CancellationToken.None);
+            return eventGridRequestHandler.HandleRequestAsync(request, this._subscriptionContext, CancellationToken.None);
         });
 
         // Then
@@ -132,7 +134,7 @@ public class EventGridRequestHandlerTests
             subscriptionEventGridWebhookHandler);
 
         var request = GetEventGridSubscriptionRequest(validationCode);
-        var result = await eventGridRequestHandler.HandleRequestAsync(request, CancellationToken.None);
+        var result = await eventGridRequestHandler.HandleRequestAsync(request, this._subscriptionContext, CancellationToken.None);
 
         // Then
         Assert.NotNull(result);
@@ -158,7 +160,7 @@ public class EventGridRequestHandlerTests
             subscriptionEventGridWebhookHandler);
 
         var request = GetCloudEventSubscriptionRequest(validationCode);
-        var result = await eventGridRequestHandler.HandleRequestAsync(request, CancellationToken.None);
+        var result = await eventGridRequestHandler.HandleRequestAsync(request, this._subscriptionContext, CancellationToken.None);
 
         // Then
         Assert.NotNull(result);
@@ -174,7 +176,7 @@ public class EventGridRequestHandlerTests
         var domainEventGridWebhookHandler = A.Fake<IDomainEventGridWebhookHandler>();
         var subscriptionEventGridWebhookHandler = A.Fake<ISubscriptionEventGridWebhookHandler>();
 
-        A.CallTo(() => domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(A<EventGridEvent>._, CancellationToken.None))
+        A.CallTo(() => domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(A<EventGridEvent>._, this._subscriptionContext, CancellationToken.None))
             .Returns(Task.CompletedTask);
 
         // When
@@ -183,7 +185,7 @@ public class EventGridRequestHandlerTests
             subscriptionEventGridWebhookHandler);
 
         var request = GetEventGridDomainEventRequest();
-        var result = await eventGridRequestHandler.HandleRequestAsync(request, CancellationToken.None);
+        var result = await eventGridRequestHandler.HandleRequestAsync(request, this._subscriptionContext, CancellationToken.None);
 
         // Then
         Assert.NotNull(result);
@@ -197,7 +199,7 @@ public class EventGridRequestHandlerTests
         var domainEventGridWebhookHandler = A.Fake<IDomainEventGridWebhookHandler>();
         var subscriptionEventGridWebhookHandler = A.Fake<ISubscriptionEventGridWebhookHandler>();
 
-        A.CallTo(() => domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(A<EventGridEvent>._, CancellationToken.None))
+        A.CallTo(() => domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(A<EventGridEvent>._, this._subscriptionContext, CancellationToken.None))
             .Returns(Task.CompletedTask);
 
         // When
@@ -206,7 +208,7 @@ public class EventGridRequestHandlerTests
             subscriptionEventGridWebhookHandler);
 
         var request = GetCloudEventDomainEventRequest();
-        var result = await eventGridRequestHandler.HandleRequestAsync(request, CancellationToken.None);
+        var result = await eventGridRequestHandler.HandleRequestAsync(request, this._subscriptionContext, CancellationToken.None);
 
         // Then
         Assert.NotNull(result);
@@ -219,7 +221,7 @@ public class EventGridRequestHandlerTests
         // Given
         var domainEventGridWebhookHandler = A.Fake<IDomainEventGridWebhookHandler>();
         var subscriptionEventGridWebhookHandler = A.Fake<ISubscriptionEventGridWebhookHandler>();
-        A.CallTo(() => domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(A<EventGridEvent>._, CancellationToken.None))
+        A.CallTo(() => domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(A<EventGridEvent>._, this._subscriptionContext, CancellationToken.None))
             .Throws(new Exception("An exception was thrown"));
 
         // When
@@ -230,7 +232,7 @@ public class EventGridRequestHandlerTests
         var request = GetEventGridDomainEventRequest();
 
         // Then
-        await Assert.ThrowsAsync<Exception>(() => eventGridRequestHandler.HandleRequestAsync(request, CancellationToken.None));
+        await Assert.ThrowsAsync<Exception>(() => eventGridRequestHandler.HandleRequestAsync(request, this._subscriptionContext, CancellationToken.None));
     }
 
     [Fact]
@@ -239,7 +241,7 @@ public class EventGridRequestHandlerTests
         // Given
         var domainEventGridWebhookHandler = A.Fake<IDomainEventGridWebhookHandler>();
         var subscriptionEventGridWebhookHandler = A.Fake<ISubscriptionEventGridWebhookHandler>();
-        A.CallTo(() => domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(A<CloudEvent>._, CancellationToken.None))
+        A.CallTo(() => domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(A<CloudEvent>._, this._subscriptionContext, CancellationToken.None))
             .Throws(new Exception("An exception was thrown"));
 
         // When
@@ -250,7 +252,7 @@ public class EventGridRequestHandlerTests
         var request = GetCloudEventDomainEventRequest();
 
         // Then
-        await Assert.ThrowsAsync<Exception>(() => eventGridRequestHandler.HandleRequestAsync(request, CancellationToken.None));
+        await Assert.ThrowsAsync<Exception>(() => eventGridRequestHandler.HandleRequestAsync(request, this._subscriptionContext, CancellationToken.None));
     }
 
     [Fact]
@@ -267,10 +269,10 @@ public class EventGridRequestHandlerTests
 
         var request = GetEventGridDomainEventRequest();
 
-        await eventGridRequestHandler.HandleRequestAsync(request, CancellationToken.None);
+        await eventGridRequestHandler.HandleRequestAsync(request, this._subscriptionContext, CancellationToken.None);
 
         // Then
-        A.CallTo(() => domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(A<EventGridEvent>._, CancellationToken.None))
+        A.CallTo(() => domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(A<EventGridEvent>._, this._subscriptionContext, CancellationToken.None))
             .MustHaveHappenedOnceExactly();
     }
 
@@ -288,10 +290,10 @@ public class EventGridRequestHandlerTests
 
         var request = GetCloudEventDomainEventRequest();
 
-        await eventGridRequestHandler.HandleRequestAsync(request, CancellationToken.None);
+        await eventGridRequestHandler.HandleRequestAsync(request, this._subscriptionContext, CancellationToken.None);
 
         // Then
-        A.CallTo(() => domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(A<CloudEvent>._, CancellationToken.None))
+        A.CallTo(() => domainEventGridWebhookHandler.HandleEventGridWebhookEventAsync(A<CloudEvent>._, this._subscriptionContext, CancellationToken.None))
             .MustHaveHappenedOnceExactly();
     }
 

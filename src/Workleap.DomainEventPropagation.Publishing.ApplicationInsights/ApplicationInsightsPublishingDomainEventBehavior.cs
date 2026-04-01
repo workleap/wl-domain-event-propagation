@@ -12,14 +12,14 @@ internal sealed class ApplicationInsightsPublishingDomainEventBehavior : IPublis
         this._telemetryClient = telemetryClient;
     }
 
-    public Task HandleAsync(DomainEventWrapperCollection domainEventWrappers, DomainEventsHandlerDelegate next, CancellationToken cancellationToken)
+    public Task HandleAsync(IDomainEventWrapperCollection domainEventWrappers, PublishingDomainEventHandlerDelegate next, CancellationToken cancellationToken)
     {
         return this._telemetryClient == null || domainEventWrappers.DomainSchema == EventSchema.CloudEvent
             ? next(domainEventWrappers, cancellationToken)
             : this.HandleWithTelemetry(domainEventWrappers, next, cancellationToken);
     }
 
-    private async Task HandleWithTelemetry(DomainEventWrapperCollection domainEventWrappers, DomainEventsHandlerDelegate next, CancellationToken cancellationToken)
+    private async Task HandleWithTelemetry(IDomainEventWrapperCollection domainEventWrappers, PublishingDomainEventHandlerDelegate next, CancellationToken cancellationToken)
     {
         var operation = this._telemetryClient!.StartActivityAwareDependencyOperation(
             domainEventWrappers.DomainEventName,

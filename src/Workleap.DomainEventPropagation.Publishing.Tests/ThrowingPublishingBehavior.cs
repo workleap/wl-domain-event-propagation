@@ -2,7 +2,7 @@ namespace Workleap.DomainEventPropagation.Publishing.Tests;
 
 internal sealed class ThrowingPublishingBehavior : IPublishingDomainEventBehavior
 {
-    public Task HandleAsync(DomainEventWrapperCollection domainEventWrappers, DomainEventsHandlerDelegate next, CancellationToken cancellationToken)
+    public Task HandleAsync(IDomainEventWrapperCollection domainEventWrappers, PublishingDomainEventHandlerDelegate next, CancellationToken cancellationToken)
     {
         if (domainEventWrappers.DomainEventName == nameof(ThrowingDomainEvent))
         {
