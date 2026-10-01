@@ -31,7 +31,8 @@ public abstract class EventPropagationClientTests
             this.EventGridPublisherClientFactory,
             this.EventGridClientFactory,
             publisherOptions,
-            Array.Empty<IPublishingDomainEventBehavior>());
+            Array.Empty<IPublishingDomainEventBehavior>(),
+            Array.Empty<IFailedDomainEventStore>());
     }
 
     [Fact]
@@ -72,7 +73,8 @@ public abstract class EventPropagationClientTests
             this.EventGridPublisherClientFactory,
             this.EventGridClientFactory,
             this._publisherOptions,
-            new[] { publisherBehavior });
+            new[] { publisherBehavior },
+            Array.Empty<IFailedDomainEventStore>());
 
         // When
         await propagationClient.PublishDomainEventAsync(domainEvent, CancellationToken.None);
@@ -92,7 +94,8 @@ public abstract class EventPropagationClientTests
             this.EventGridPublisherClientFactory,
             this.EventGridClientFactory,
             this._publisherOptions,
-            new[] { publisherBehavior });
+            new[] { publisherBehavior },
+            Array.Empty<IFailedDomainEventStore>());
 
         // When
         await propagationClient.PublishDomainEventAsync(domainEvent, CancellationToken.None);

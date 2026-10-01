@@ -30,6 +30,11 @@ internal sealed class DomainEventWrapperCollection : IReadOnlyCollection<DomainE
         return new DomainEventWrapperCollection(domainEventWrappers, configureDomainEventMetadata, DomainEventNameCache.GetName<T>(), DomainEventSchemaCache.GetEventSchema<T>());
     }
 
+    public static DomainEventWrapperCollection Create(DomainEventWrapper domainEventWrapper)
+    {
+        return new DomainEventWrapperCollection(new[] { domainEventWrapper }, configureDomainEventMetadata: null, domainEventWrapper.DomainEventName, domainEventWrapper.DomainEventSchema);
+    }
+
     public IEnumerator<DomainEventWrapper> GetEnumerator()
     {
         // See https://stackoverflow.com/questions/1272673/obtain-generic-enumerator-from-an-array

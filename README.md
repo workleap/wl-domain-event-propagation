@@ -130,6 +130,35 @@ var domainEvent = new ExampleDomainEvent
 await this._eventPropagationClient.PublishDomainEventAsync(domainEvent, x => x.Subject = "<custom_subject>", CancellationToken.None);
 ```
 
+#### Store domain events that fail to publish
+
+By default, a publish call that fails throws an `EventPropagationPublishingException` and the events are lost.
+You can opt in to hand them to your own storage instead, and republish them later, for example from a recurring background job.
+
+```csharp
+services.AddEventPropagationPublisher().AddFailedDomainEventStore<MyFailedDomainEventStore>();
+
+// Registered as a singleton
+public sealed class MyFailedDomainEventStore : IFailedDomainEventStore
+{
+    public async Task<bool> TryStoreAsync(IReadOnlyCollection<FailedDomainEvent> domainEvents, EventPropagationPublishingException exception, CancellationToken cancellationToken)
+    {
+        // Persist DomainEventName, Schema and Data for each event.
+        // Return true once stored: the publish call then completes without throwing.
+        // Return false to decline (e.g. a feature flag is off): the publish call throws as usual.
+        return true;
+    }
+}
+
+// Later, for each stored event
+await this._failedDomainEventRepublisher.RepublishAsync(new FailedDomainEvent(name, schema, data), cancellationToken);
+```
+
+- The store receives a token that is not linked to the publish call, so it still runs when the caller was cancelled, typically after its own changes were committed.
+- If the store throws, the publish call throws `EventPropagationPublishingException` as it would without a store.
+- `IFailedDomainEventRepublisher` is always registered. It throws `EventPropagationPublishingException` on failure and never hands the event back to the store.
+- Publish calls that configure CloudEvent metadata are not stored, since that metadata cannot be replayed.
+- Delivery is at least once: when a batch of more than 1,000 events fails part-way, the whole batch is stored, so the events already sent are delivered twice.
 
 ### Subscribe to domain events with push delivery
 

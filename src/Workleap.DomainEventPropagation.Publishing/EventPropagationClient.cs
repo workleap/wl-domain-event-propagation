@@ -10,13 +10,14 @@ namespace Workleap.DomainEventPropagation;
 /// <summary>
 /// https://github.com/Azure/azure-sdk-for-net/blob/master/sdk/eventgrid/Azure.Messaging.EventGrid/README.md
 /// </summary>
-internal sealed class EventPropagationClient : IEventPropagationClient
+internal sealed class EventPropagationClient : IEventPropagationClient, IFailedDomainEventRepublisher
 {
     private const int EventGridMaxEventsPerBatch = 1000;
     private const string DomainEventDefaultVersion = "1.0";
 
     private readonly EventPropagationPublisherOptions _eventPropagationPublisherOptions;
     private readonly DomainEventsHandlerDelegate _pipeline;
+    private readonly IFailedDomainEventStore? _failedDomainEventStore;
     private readonly EventGridPublisherClient? _eventGridPublisherClient;
     private readonly EventGridSenderClient? _eventGridNamespaceClient;
 
@@ -28,10 +29,12 @@ internal sealed class EventPropagationClient : IEventPropagationClient
         IAzureClientFactory<EventGridPublisherClient> eventGridPublisherClientFactory,
         IAzureClientFactory<EventGridSenderClient> eventGridClientFactory,
         IOptions<EventPropagationPublisherOptions> eventPropagationPublisherOptions,
-        IEnumerable<IPublishingDomainEventBehavior> publishingDomainEventBehaviors)
+        IEnumerable<IPublishingDomainEventBehavior> publishingDomainEventBehaviors,
+        IEnumerable<IFailedDomainEventStore> failedDomainEventStores)
     {
         this._eventPropagationPublisherOptions = eventPropagationPublisherOptions.Value;
         this._pipeline = publishingDomainEventBehaviors.Reverse().Aggregate((DomainEventsHandlerDelegate)this.SendDomainEventsAsync, BuildPipeline);
+        this._failedDomainEventStore = failedDomainEventStores.LastOrDefault();
 
         switch (this._eventPropagationPublisherOptions.TopicType)
         {
@@ -92,7 +95,57 @@ internal sealed class EventPropagationClient : IEventPropagationClient
         }
         catch (Exception ex)
         {
-            throw new EventPropagationPublishingException(domainEventWrappers.DomainEventName, this._eventPropagationPublisherOptions.TopicEndpoint, ex);
+            var publishingException = new EventPropagationPublishingException(domainEventWrappers.DomainEventName, this._eventPropagationPublisherOptions.TopicEndpoint, ex);
+
+            // Metadata configured through the callback lives on the CloudEvent envelope and cannot be replayed from the stored data
+            if (configureDomainEventMetadata == null && await this.TryStoreFailedDomainEventsAsync(domainEventWrappers, publishingException).ConfigureAwait(false))
+            {
+                return;
+            }
+
+            throw publishingException;
+        }
+    }
+
+    public async Task RepublishAsync(FailedDomainEvent domainEvent, CancellationToken cancellationToken)
+    {
+        if (domainEvent == null)
+        {
+            throw new ArgumentNullException(nameof(domainEvent));
+        }
+
+        var domainEventWrapper = DomainEventWrapper.FromSerializedData(domainEvent.Data, domainEvent.DomainEventName, domainEvent.Schema);
+        var domainEventWrappers = DomainEventWrapperCollection.Create(domainEventWrapper);
+
+        try
+        {
+            await this._pipeline(domainEventWrappers, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            throw new EventPropagationPublishingException(domainEvent.DomainEventName, this._eventPropagationPublisherOptions.TopicEndpoint, ex);
+        }
+    }
+
+    private async Task<bool> TryStoreFailedDomainEventsAsync(DomainEventWrapperCollection domainEventWrappers, EventPropagationPublishingException publishingException)
+    {
+        if (this._failedDomainEventStore == null)
+        {
+            return false;
+        }
+
+        var failedDomainEvents = domainEventWrappers
+            .Select(wrapper => new FailedDomainEvent(wrapper.DomainEventName, wrapper.DomainEventSchema, wrapper.Data.ToJsonString()))
+            .ToArray();
+
+        try
+        {
+            // The caller's token is often the cancelled request that caused the failure, and its changes are already committed
+            return await this._failedDomainEventStore.TryStoreAsync(failedDomainEvents, publishingException, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch
+        {
+            return false;
         }
     }
 

@@ -78,4 +78,12 @@ internal sealed class DomainEventWrapper
 
         return new DomainEventWrapper(serializedEvent, domainEventName, domainEventSchema);
     }
+
+    public static DomainEventWrapper FromSerializedData(string data, string domainEventName, EventSchema domainEventSchema)
+    {
+        var serializedEvent = JsonNode.Parse(data) as JsonObject
+            ?? throw new ArgumentException("The event data must be a JSON object", nameof(data));
+
+        return new DomainEventWrapper(serializedEvent, domainEventName, domainEventSchema);
+    }
 }

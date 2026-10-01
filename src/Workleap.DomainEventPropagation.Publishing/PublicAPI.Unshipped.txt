@@ -1,1 +1,12 @@
 #nullable enable
+static Workleap.DomainEventPropagation.EventPropagationPublisherBuilderFailedDomainEventStoreExtensions.AddFailedDomainEventStore<TStore>(this Workleap.DomainEventPropagation.IEventPropagationPublisherBuilder! builder) -> Workleap.DomainEventPropagation.IEventPropagationPublisherBuilder!
+Workleap.DomainEventPropagation.EventPropagationPublisherBuilderFailedDomainEventStoreExtensions
+Workleap.DomainEventPropagation.FailedDomainEvent
+Workleap.DomainEventPropagation.FailedDomainEvent.Data.get -> string!
+Workleap.DomainEventPropagation.FailedDomainEvent.DomainEventName.get -> string!
+Workleap.DomainEventPropagation.FailedDomainEvent.FailedDomainEvent(string! domainEventName, Workleap.DomainEventPropagation.EventSchema schema, string! data) -> void
+Workleap.DomainEventPropagation.FailedDomainEvent.Schema.get -> Workleap.DomainEventPropagation.EventSchema
+Workleap.DomainEventPropagation.IFailedDomainEventRepublisher
+Workleap.DomainEventPropagation.IFailedDomainEventRepublisher.RepublishAsync(Workleap.DomainEventPropagation.FailedDomainEvent! domainEvent, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Workleap.DomainEventPropagation.IFailedDomainEventStore
+Workleap.DomainEventPropagation.IFailedDomainEventStore.TryStoreAsync(System.Collections.Generic.IReadOnlyCollection<Workleap.DomainEventPropagation.FailedDomainEvent!>! domainEvents, Workleap.DomainEventPropagation.EventPropagationPublishingException! exception, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!

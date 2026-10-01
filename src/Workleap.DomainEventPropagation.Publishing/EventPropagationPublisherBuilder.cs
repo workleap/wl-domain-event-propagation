@@ -27,7 +27,9 @@ internal sealed class EventPropagationPublisherBuilder : IEventPropagationPublis
             .Configure<IConfiguration>(BindFromWellKnownConfigurationSection)
             .Configure(configure);
 
-        this.Services.TryAddSingleton<IEventPropagationClient, EventPropagationClient>();
+        this.Services.TryAddSingleton<EventPropagationClient>();
+        this.Services.TryAddSingleton<IEventPropagationClient>(serviceProvider => serviceProvider.GetRequiredService<EventPropagationClient>());
+        this.Services.TryAddSingleton<IFailedDomainEventRepublisher>(serviceProvider => serviceProvider.GetRequiredService<EventPropagationClient>());
         this.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<EventPropagationPublisherOptions>, EventPropagationPublisherOptionsValidator>());
         this.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPublishingDomainEventBehavior, TracingPublishingDomainEventBehavior>());
 
