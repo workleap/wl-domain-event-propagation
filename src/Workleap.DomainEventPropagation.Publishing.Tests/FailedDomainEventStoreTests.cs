@@ -230,7 +230,7 @@ public class FailedDomainEventStoreTests
 
         // Then
         Assert.IsType<InMemoryFailedDomainEventStore>(serviceProvider.GetRequiredService<IFailedDomainEventStore>());
-        Assert.Same(serviceProvider.GetRequiredService<IEventPropagationClient>(), serviceProvider.GetRequiredService<IFailedDomainEventRepublisher>());
+        Assert.IsType<EventPropagationClient>(serviceProvider.GetRequiredService<IFailedDomainEventRepublisher>());
     }
 
     [Fact]
@@ -245,7 +245,46 @@ public class FailedDomainEventStoreTests
 
         // Then
         Assert.Null(serviceProvider.GetService<IFailedDomainEventStore>());
-        Assert.Same(serviceProvider.GetRequiredService<IEventPropagationClient>(), serviceProvider.GetRequiredService<IFailedDomainEventRepublisher>());
+        Assert.IsType<EventPropagationClient>(serviceProvider.GetRequiredService<IFailedDomainEventRepublisher>());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void GivenPublisherRegistered_WhenInspectClientRegistration_ThenItIsUnchangedFromPreviousVersions(bool withStore)
+    {
+        // Given
+        var services = CreateServiceCollection();
+
+        // When
+        var builder = services.AddEventPropagationPublisher();
+        if (withStore)
+        {
+            builder.AddFailedDomainEventStore<InMemoryFailedDomainEventStore>();
+        }
+
+        // Then
+        var clientDescriptor = Assert.Single(services, x => x.ServiceType == typeof(IEventPropagationClient));
+        Assert.Equal(typeof(EventPropagationClient), clientDescriptor.ImplementationType);
+        Assert.Null(clientDescriptor.ImplementationFactory);
+        Assert.Equal(ServiceLifetime.Singleton, clientDescriptor.Lifetime);
+        Assert.DoesNotContain(services, x => x.ServiceType == typeof(EventPropagationClient));
+    }
+
+    [Fact]
+    public void GivenClientRegisteredByConsumer_WhenAddEventPropagationPublisher_ThenConsumerClientIsKept()
+    {
+        // Given
+        var services = CreateServiceCollection();
+        var consumerClient = A.Fake<IEventPropagationClient>();
+        services.AddSingleton(consumerClient);
+
+        // When
+        services.AddEventPropagationPublisher();
+        using var serviceProvider = services.BuildServiceProvider();
+
+        // Then
+        Assert.Same(consumerClient, serviceProvider.GetRequiredService<IEventPropagationClient>());
     }
 
     [Fact]
