@@ -156,7 +156,7 @@ await this._failedDomainEventRepublisher.RepublishAsync(new FailedDomainEvent(na
 
 - The store receives a token that is not linked to the publish call, so it still runs when the caller was cancelled, typically after its own changes were committed.
 - If the store throws, the publish call throws `EventPropagationPublishingException` as it would without a store.
-- `IFailedDomainEventRepublisher` is always registered. It throws `EventPropagationPublishingException` on failure and never hands the event back to the store.
+- `IFailedDomainEventRepublisher` is always registered. It throws `EventPropagationPublishingException` on failure and never hands the event back to the store. It throws `ArgumentException` when the stored data is not a JSON object: retrying won't help, so stop republishing that event.
 - Publish calls that configure CloudEvent metadata are not stored, since that metadata cannot be replayed.
 - Delivery is at least once: when a batch of more than 1,000 events fails part-way, the whole batch is stored, so the events already sent are delivered twice.
 

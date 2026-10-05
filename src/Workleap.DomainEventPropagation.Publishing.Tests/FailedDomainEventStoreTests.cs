@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure;
 using Azure.Messaging;
@@ -202,6 +203,44 @@ public class FailedDomainEventStoreTests
     }
 
     [Fact]
+    public async Task GivenDataIsNotValidJson_WhenRepublish_ThenThrowsArgumentExceptionWithoutSending()
+    {
+        // Given
+        var storedEvent = new FailedDomainEvent(EventGridEventName, EventSchema.EventGridEvent, "{not json");
+
+        // When
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => this._client.RepublishAsync(storedEvent, CancellationToken.None));
+
+        // Then
+        Assert.Equal("data", exception.ParamName);
+        Assert.IsAssignableFrom<JsonException>(exception.InnerException);
+        A.CallTo(() => this._eventGridPublisherClient.SendEventsAsync(A<IEnumerable<EventGridEvent>>._, A<CancellationToken>._)).MustNotHaveHappened();
+    }
+
+    [Fact]
+    public async Task GivenBehaviorInjectsTraceContext_WhenPublishFails_ThenStoredDataContainsIt()
+    {
+        // Given
+        const string traceParent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
+        var client = this.CreateClient(this._store, new TraceContextInjectingBehavior(traceParent));
+        this.GivenEventGridSendFails();
+
+        FailedDomainEvent? storedEvent = null;
+        A.CallTo(() => this._store.TryStoreAsync(A<IReadOnlyCollection<FailedDomainEvent>>._, A<EventPropagationPublishingException>._, A<CancellationToken>._))
+            .Invokes((IReadOnlyCollection<FailedDomainEvent> events, EventPropagationPublishingException _, CancellationToken _) => storedEvent = events.Single())
+            .Returns(true);
+
+        // When
+        await client.PublishDomainEventAsync(new TestEventGridEvent { Text = "traced" }, CancellationToken.None);
+
+        // Then
+        Assert.NotNull(storedEvent);
+        var storedData = JsonNode.Parse(storedEvent.Data)!;
+        Assert.Equal(traceParent, storedData["__traceparent"]?.GetValue<string>());
+        Assert.Equal("traced", storedData["text"]?.GetValue<string>());
+    }
+
+    [Fact]
     public async Task GivenNullEvent_WhenRepublish_ThenThrowsArgumentNullException()
     {
         // When
@@ -322,7 +361,7 @@ public class FailedDomainEventStoreTests
                data["number"]!.GetValue<int>() == 42;
     }
 
-    private EventPropagationClient CreateClient(IFailedDomainEventStore? store)
+    private EventPropagationClient CreateClient(IFailedDomainEventStore? store, params IPublishingDomainEventBehavior[] behaviors)
     {
         var options = Options.Create(new EventPropagationPublisherOptions
         {
@@ -335,7 +374,7 @@ public class FailedDomainEventStoreTests
             this._eventGridPublisherClientFactory,
             this._eventGridSenderClientFactory,
             options,
-            Array.Empty<IPublishingDomainEventBehavior>(),
+            behaviors,
             store == null ? Array.Empty<IFailedDomainEventStore>() : new[] { store });
     }
 
@@ -371,6 +410,20 @@ public class FailedDomainEventStoreTests
     private sealed class TestCloudEvent : IDomainEvent
     {
         public string Text { get; set; } = string.Empty;
+    }
+
+    // Writes metadata the same way TracingPublishingDomainEventBehavior does, without depending on global OpenTelemetry state
+    private sealed class TraceContextInjectingBehavior(string traceParent) : IPublishingDomainEventBehavior
+    {
+        public Task HandleAsync(DomainEventWrapperCollection domainEventWrappers, DomainEventsHandlerDelegate next, CancellationToken cancellationToken)
+        {
+            foreach (var domainEventWrapper in domainEventWrappers)
+            {
+                domainEventWrapper.SetMetadata("traceparent", traceParent);
+            }
+
+            return next(domainEventWrappers, cancellationToken);
+        }
     }
 
     private sealed class InMemoryFailedDomainEventStore : IFailedDomainEventStore
