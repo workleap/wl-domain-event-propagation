@@ -196,6 +196,26 @@ public class EventPullerServiceTests : IDisposable
         this.ThenClientRejectedEvents(client, events);
     }
 
+    [Fact]
+    public async Task GivenEventsReceivedUpToAndPastMaxRetries_WhenHandled_ThenOnlyEventsPastMaxRetriesAreHandledAsLastDelivery()
+    {
+        // Given
+        var maxRetries = 3;
+        var client = this.GivenClient(options: GenerateOptions(
+            maxRetries: maxRetries
+        ));
+        var retriedEvent = GenerateEvent(deliveryCount: maxRetries);
+        var lastEvent = GenerateEvent(deliveryCount: maxRetries + 1);
+        this.GivenEventsForClient(client, retriedEvent, lastEvent);
+
+        // When
+        await this.WhenRunningPullerService();
+
+        // Then
+        this.ThenClientHandledEventDelivery(client, retriedEvent, isLastDelivery: false);
+        this.ThenClientHandledEventDelivery(client, lastEvent, isLastDelivery: true);
+    }
+
     public static IEnumerable<object[]> RejectingExceptions()
     {
         yield return [new DomainEventTypeNotRegisteredException("event")];
@@ -307,7 +327,7 @@ public class EventPullerServiceTests : IDisposable
     private void GivenClientFailsHandlingEvents(EventPullerClient client, Exception? exception = null)
     {
         exception ??= new Exception("Unhandled exception");
-        A.CallTo(() => client.EventHandler.HandleCloudEventAsync(A<CloudEvent>._, A<CancellationToken>._)).Throws(exception);
+        A.CallTo(() => client.EventHandler.HandleCloudEventAsync(A<CloudEvent>._, A<int>._, A<bool>._, A<CancellationToken>._)).Throws(exception);
     }
 
     private async Task WhenRunningPullerService()
@@ -347,8 +367,13 @@ public class EventPullerServiceTests : IDisposable
     {
         foreach (var eventBundle in events)
         {
-            A.CallTo(() => client.EventHandler.HandleCloudEventAsync(eventBundle.Event, A<CancellationToken>._)).MustHaveHappenedOnceOrMore();
+            A.CallTo(() => client.EventHandler.HandleCloudEventAsync(eventBundle.Event, A<int>._, A<bool>._, A<CancellationToken>._)).MustHaveHappenedOnceOrMore();
         }
+    }
+
+    private void ThenClientHandledEventDelivery(EventPullerClient client, EventBundle eventBundle, bool isLastDelivery)
+    {
+        A.CallTo(() => client.EventHandler.HandleCloudEventAsync(eventBundle.Event, eventBundle.DeliveryCount, isLastDelivery, A<CancellationToken>._)).MustHaveHappenedOnceOrMore();
     }
 
     private void ThenClientAcknowledgedEvents(EventPullerClient client, params EventBundle[] events)

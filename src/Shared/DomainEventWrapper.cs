@@ -42,6 +42,10 @@ internal sealed class DomainEventWrapper
 
     public EventSchema DomainEventSchema { get; }
 
+    public int? DeliveryCount { get; set; }
+
+    public bool? IsLastDelivery { get; set; }
+
     public void SetMetadata(string key, string value)
     {
         this.Data[GetMetadataKey(key)] = value;

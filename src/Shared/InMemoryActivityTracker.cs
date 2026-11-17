@@ -138,6 +138,16 @@ internal sealed class InMemoryActivityTracker : IDisposable
         }
     }
 
+    public void AssertDeliveryTagsSet(string activityName, int deliveryCount, bool isLastDelivery)
+    {
+        lock (this._activitiesLock)
+        {
+            var activity = Assert.Single(this._activities, activity => activity.OperationName == activityName);
+            Assert.Equal(deliveryCount, activity.GetTagItem(TracingHelper.CloudEventsDeliveryCountTag));
+            Assert.Equal(isLastDelivery, activity.GetTagItem(TracingHelper.CloudEventsIsLastDeliveryTag));
+        }
+    }
+
     public void AssertEventgridEventsTagsSet(string activityName)
     {
         lock (this._activitiesLock)

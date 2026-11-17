@@ -324,6 +324,11 @@ To ensure that messages end up in the Dead Letter Queue, a client-side retry cou
 
 It can be configured by setting the `MaxRetries` property in the `EventGridSubscriptionClientOptions`. The default value is 3.
 
+The `CloudEvents process` activity of each delivery carries two tags, so a failure can be alerted on only once the event won't be retried:
+
+- `cloudevents.delivery_count`: the Event Grid delivery count of the event, starting at 1.
+- `cloudevents.is_last_delivery`: `true` when the event is rejected if this delivery fails. That is the case once the delivery count exceeds `MaxRetries`, or when no handler is registered for the event.
+
 ## Configure the underlying Event Grid clients options
 
 You can use the [named options pattern](https://learn.microsoft.com/en-us/dotnet/core/extensions/options#named-options-support-using-iconfigurenamedoptions) to configure the behavior of the underlying Event Grid clients. For instance:
