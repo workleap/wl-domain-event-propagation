@@ -1,3 +1,4 @@
+using Azure;
 using Azure.Messaging;
 using FakeItEasy;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,6 +47,36 @@ public class EventPullerServiceTests : IDisposable
         // Then
         this.ThenClientReceivedEvents(failingClient);
         this.ThenClientHandledEvents(functionalClient, events);
+    }
+
+    [Theory]
+    [MemberData(nameof(EventGridUnavailableExceptions))]
+    public async Task GivenEventGridUnavailableOnReceiving_WhenItRecovers_ThenEventsAreHandledWithoutStoppingTheService(Exception exception)
+    {
+        // Given
+        var client = this.GivenClient();
+        var events = this.GivenEventsForClientAfterReceivingFailure(client, exception, GenerateEvent());
+
+        // When
+        await this.WhenRunningPullerService();
+
+        // Then
+        this.ThenClientHandledEvents(client, events);
+        this.ThenClientAcknowledgedEvents(client, events);
+    }
+
+    [Fact]
+    public async Task GivenEventGridUnavailableOnAcknowledging_WhenItRecovers_ThenEventsAreReceivedAgainWithoutStoppingTheService()
+    {
+        // Given
+        var client = this.GivenClient();
+        var events = this.GivenEventsRedeliveredAfterAcknowledgingFailsOnce(client, new RequestFailedException("Connection refused"), GenerateEvent());
+
+        // When
+        await this.WhenRunningPullerService();
+
+        // Then
+        this.ThenClientAcknowledgedEvents(client, events);
     }
 
     [Fact]
@@ -223,6 +254,12 @@ public class EventPullerServiceTests : IDisposable
         yield return [new DomainEventHandlerNotRegisteredException("eventName")];
     }
 
+    public static IEnumerable<object[]> EventGridUnavailableExceptions()
+    {
+        yield return [new RequestFailedException("Connection refused")];
+        yield return [new AggregateException(new RequestFailedException("Connection refused"), new RequestFailedException("Connection refused"))];
+    }
+
     private EventPullerClient GivenClient(string clientName = "client", EventPropagationSubscriptionOptions? options = null)
     {
         options ??= GenerateOptions(clientName);
@@ -267,7 +304,7 @@ public class EventPullerServiceTests : IDisposable
 
             if (this._eventCounter <= 0)
             {
-                this._eventCompletionSource.SetResult();
+                this._eventCompletionSource.TrySetResult();
             }
         }
 
@@ -304,6 +341,46 @@ public class EventPullerServiceTests : IDisposable
 
         // Disable completion on events received to make sure we wait around and see the exception happen
         this._eventCounter += 1;
+    }
+
+    private EventBundle[] GivenEventsRedeliveredAfterAcknowledgingFailsOnce(EventPullerClient client, Exception exception, params EventBundle[] events)
+    {
+        var acknowledgementFailed = false;
+
+        A.CallTo(() => client.Client.AcknowledgeCloudEventsAsync(client.Options.TopicName, client.Options.SubscriptionName, A<IEnumerable<string>>._, A<CancellationToken>._))
+            .Invokes(() => acknowledgementFailed = true)
+            .Throws(exception).Once();
+
+        // Event Grid keeps redelivering the events until they are acknowledged
+        A.CallTo(() => client.Client
+                .ReceiveCloudEventsAsync(client.Options.TopicName, client.Options.SubscriptionName, A<int>._, A<CancellationToken>._))
+                .Returns(events).Once()
+                .Then.ReturnsLazily(async _ =>
+                {
+                    await Task.Delay(10);
+                    return acknowledgementFailed && client.EventHandlingResult.AcknowledgedEvents.Count == 0 ? events : [];
+                });
+
+        this._eventCounter += events.Length;
+
+        return events;
+    }
+
+    private EventBundle[] GivenEventsForClientAfterReceivingFailure(EventPullerClient client, Exception exception, params EventBundle[] events)
+    {
+        A.CallTo(() => client.Client
+                .ReceiveCloudEventsAsync(client.Options.TopicName, client.Options.SubscriptionName, A<int>._, A<CancellationToken>._))
+                .Throws(exception).Once()
+                .Then.Returns(events).Once()
+                .Then.ReturnsLazily(async _ =>
+                {
+                    await Task.Delay(10);
+                    return [];
+                });
+
+        this._eventCounter += events.Length;
+
+        return events;
     }
 
     private EventBundle[] GivenEventsForClient(EventPullerClient client, params EventBundle[] events)

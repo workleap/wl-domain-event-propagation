@@ -26,4 +26,7 @@ internal static partial class LoggingExtensions
 
     [LoggerMessage(7, LogLevel.Information, "The event with {eventId} {EventName} will be rejected since it exceed the max retries count.")]
     public static partial void EventWillBeRejectedDueToMaxRetries(this ILogger logger, string eventId, string eventName, Exception ex);
+
+    [LoggerMessage(8, LogLevel.Error, "Event Grid is unavailable for topic {TopicName} on subscription {Subscription} ({ConsecutiveFailures} consecutive failures), events will be pulled again in {ReconnectDelay}")]
+    public static partial void EventGridUnavailable(this ILogger logger, string topicName, string subscription, int consecutiveFailures, TimeSpan reconnectDelay, Exception ex);
 }
