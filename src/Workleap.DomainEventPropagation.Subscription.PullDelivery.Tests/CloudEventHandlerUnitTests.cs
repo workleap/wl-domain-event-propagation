@@ -30,7 +30,7 @@ public class CloudEventHandlerUnitTests
         var handler = GivenCloudEventHandler(services);
 
         // When
-        await Assert.ThrowsAsync<CloudEventSerializationException>(() => handler.HandleCloudEventAsync(cloudEvent, CancellationToken.None));
+        await Assert.ThrowsAsync<CloudEventSerializationException>(() => handler.HandleCloudEventAsync(cloudEvent, deliveryCount: 1, isLastDelivery: false, CancellationToken.None));
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public class CloudEventHandlerUnitTests
         var handler = GivenCloudEventHandler(services);
 
         // When
-        await Assert.ThrowsAsync<DomainEventTypeNotRegisteredException>(() => handler.HandleCloudEventAsync(cloudEvent, CancellationToken.None));
+        await Assert.ThrowsAsync<DomainEventTypeNotRegisteredException>(() => handler.HandleCloudEventAsync(cloudEvent, deliveryCount: 1, isLastDelivery: false, CancellationToken.None));
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class CloudEventHandlerUnitTests
         var handler = GivenCloudEventHandler(services);
 
         // When
-        await Assert.ThrowsAnyAsync<Exception>(() => handler.HandleCloudEventAsync(cloudEvent, CancellationToken.None));
+        await Assert.ThrowsAnyAsync<Exception>(() => handler.HandleCloudEventAsync(cloudEvent, deliveryCount: 1, isLastDelivery: false, CancellationToken.None));
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public class CloudEventHandlerUnitTests
         var handler = GivenCloudEventHandler(services);
 
         // When
-        await handler.HandleCloudEventAsync(cloudEvent, CancellationToken.None);
+        await handler.HandleCloudEventAsync(cloudEvent, deliveryCount: 1, isLastDelivery: false, CancellationToken.None);
 
         // Then
         Assert.Single(SampleEventTestHandler.ReceivedEvents, e => e.Message == eventMessage);
@@ -100,7 +100,7 @@ public class CloudEventHandlerUnitTests
         var handler = GivenCloudEventHandler(services);
 
         // When
-        await handler.HandleCloudEventAsync(cloudEvent, CancellationToken.None);
+        await handler.HandleCloudEventAsync(cloudEvent, deliveryCount: 1, isLastDelivery: false, CancellationToken.None);
 
         // Then
         Assert.Single(SampleEventTestHandler.ReceivedEvents, e => e.Message == eventMessage);

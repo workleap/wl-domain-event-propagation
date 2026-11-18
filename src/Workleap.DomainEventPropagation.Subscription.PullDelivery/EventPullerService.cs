@@ -177,9 +177,11 @@ internal sealed class EventPullerService : BackgroundService
 
         private async Task HandleBundleAsync(ICloudEventHandler cloudEventHandler, EventBundle eventBundle, CancellationToken cancellationToken)
         {
+            var isLastDelivery = eventBundle.DeliveryCount > this._eventGridTopicSubscription.MaxRetriesCount;
+
             try
             {
-                await cloudEventHandler.HandleCloudEventAsync(eventBundle.Event, cancellationToken).ConfigureAwait(false);
+                await cloudEventHandler.HandleCloudEventAsync(eventBundle.Event, eventBundle.DeliveryCount, isLastDelivery, cancellationToken).ConfigureAwait(false);
                 await this._acknowledgeEventChannel.Writer.WriteAsync(eventBundle, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -192,7 +194,7 @@ internal sealed class EventPullerService : BackgroundService
                         this._logger.EventWillBeRejected(eventBundle.Event.Id, eventBundle.Event.Type, ex);
                         await this._rejectEventChannel.Writer.WriteAsync(eventBundle, cancellationToken).ConfigureAwait(false);
                         break;
-                    case not null when eventBundle.DeliveryCount > this._eventGridTopicSubscription.MaxRetriesCount:
+                    case not null when isLastDelivery:
                         this._logger.EventWillBeRejectedDueToMaxRetries(eventBundle.Event.Id, eventBundle.Event.Type, ex);
                         await this._rejectEventChannel.Writer.WriteAsync(eventBundle, cancellationToken).ConfigureAwait(false);
                         break;

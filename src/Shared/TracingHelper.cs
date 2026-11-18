@@ -28,6 +28,10 @@ internal static class TracingHelper
     internal const string CloudEventsSourceTag = "cloudevents.event_source";
     internal const string CloudEventsTypeTag = "cloudevents.event_type";
 
+    // Not part of the semantic conventions. Pull delivery sets them so a subscriber can tell a final failed delivery from one Event Grid will retry.
+    internal const string CloudEventsDeliveryCountTag = "cloudevents.delivery_count";
+    internal const string CloudEventsIsLastDeliveryTag = "cloudevents.is_last_delivery";
+
     internal const string EventgridEventsIdTag = "eventgridevents.event_id";
     internal const string EventgridEventsSourceTag = "eventgridevents.event_source";
     internal const string EventgridEventsTypeTag = "eventgridevents.event_type";

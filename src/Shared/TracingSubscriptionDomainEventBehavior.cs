@@ -46,6 +46,14 @@ internal sealed class TracingSubscriptionDomainEventBehavior : ISubscriptionDoma
             TracingHelper.MarkAsFailed(activity, ex);
             throw;
         }
+        finally
+        {
+            // Read once the handler is done, since it can find out the delivery is the last one, e.g. when no handler is registered
+            if (domainEventWrapper.IsLastDelivery is { } isLastDelivery)
+            {
+                activity.AddTag(TracingHelper.CloudEventsIsLastDeliveryTag, isLastDelivery);
+            }
+        }
     }
 
     private static string GetSubscriptionActivityName(DomainEventWrapper domainEventWrappers) => domainEventWrappers.DomainEventSchema switch
@@ -63,6 +71,12 @@ internal sealed class TracingSubscriptionDomainEventBehavior : ISubscriptionDoma
                 activity.AddTag(TracingHelper.CloudEventsIdTag, domainEventWrapper.Id);
                 activity.AddTag(TracingHelper.CloudEventsSourceTag, domainEventWrapper.Source);
                 activity.AddTag(TracingHelper.CloudEventsTypeTag, domainEventWrapper.DomainEventName);
+
+                if (domainEventWrapper.DeliveryCount is { } deliveryCount)
+                {
+                    activity.AddTag(TracingHelper.CloudEventsDeliveryCountTag, deliveryCount);
+                }
+
                 break;
             case EventSchema.EventGridEvent:
                 activity.AddTag(TracingHelper.EventgridEventsIdTag, domainEventWrapper.Id);

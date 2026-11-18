@@ -16,9 +16,9 @@ internal sealed class CloudEventHandler : BaseEventHandler, ICloudEventHandler
         this._pipeline = domainEventBehaviors.Reverse().Aggregate((DomainEventHandlerDelegate)this.HandleDomainEventAsync, BuildPipeline);
     }
 
-    public async Task HandleCloudEventAsync(CloudEvent cloudEvent, CancellationToken cancellationToken)
+    public async Task HandleCloudEventAsync(CloudEvent cloudEvent, int deliveryCount, bool isLastDelivery, CancellationToken cancellationToken)
     {
-        var domainEventWrapper = WrapCloudEvent(cloudEvent);
+        var domainEventWrapper = WrapCloudEvent(cloudEvent, deliveryCount, isLastDelivery);
         if (this.GetDomainEventType(domainEventWrapper.DomainEventName) == null)
         {
             throw new DomainEventTypeNotRegisteredException(domainEventWrapper.DomainEventName);
@@ -27,11 +27,11 @@ internal sealed class CloudEventHandler : BaseEventHandler, ICloudEventHandler
         await this._pipeline(domainEventWrapper, cancellationToken).ConfigureAwait(false);
     }
 
-    private static DomainEventWrapper WrapCloudEvent(CloudEvent cloudEvent)
+    private static DomainEventWrapper WrapCloudEvent(CloudEvent cloudEvent, int deliveryCount, bool isLastDelivery)
     {
         try
         {
-            return new DomainEventWrapper(cloudEvent);
+            return new DomainEventWrapper(cloudEvent) { DeliveryCount = deliveryCount, IsLastDelivery = isLastDelivery };
         }
         catch (Exception ex)
         {
@@ -52,6 +52,8 @@ internal sealed class CloudEventHandler : BaseEventHandler, ICloudEventHandler
 
         if (handler == null)
         {
+            // The puller rejects this event on any delivery, so this delivery is its last one
+            domainEventWrapper.IsLastDelivery = true;
             throw new DomainEventHandlerNotRegisteredException(domainEventWrapper.DomainEventName);
         }
 
