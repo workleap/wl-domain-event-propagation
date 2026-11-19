@@ -80,6 +80,26 @@ public class EventPullerServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GivenEventGridUnavailableOnAcknowledgingAndUnrelatedFailureOnReleasing_WhenBothFail_ThenBubbleUpBothExceptions()
+    {
+        // Given
+        var client = this.GivenClient();
+        var acknowledged = GenerateEvent();
+        var released = GenerateEvent();
+
+        this.GivenEventsForClient(client, acknowledged, released);
+        A.CallTo(() => client.EventHandler.HandleCloudEventAsync(A<CloudEvent>.That.IsSameAs(released.Event), A<int>._, A<bool>._, A<CancellationToken>._)).Throws(new Exception("Unhandled exception"));
+        this.GivenAcknowledgingAndReleasingFailTogether(client, new RequestFailedException("Connection refused"), new LocalTestException());
+
+        // When
+        var exception = await Assert.ThrowsAsync<AggregateException>(this.WhenRunningPullerService).WaitAsync(TimeSpan.FromSeconds(30));
+
+        // Then
+        Assert.Contains(exception.InnerExceptions, x => x is RequestFailedException);
+        Assert.Contains(exception.InnerExceptions, x => x is LocalTestException);
+    }
+
+    [Fact]
     public async Task GivenClientFailingOnAcknowledgeCallback_WhenErrorOccured_ThenBubbleUpException()
     {
         // Given
@@ -338,6 +358,31 @@ public class EventPullerServiceTests : IDisposable
     private void GivenClientFailsRejectingEvents(EventPullerClient client)
     {
         A.CallTo(() => client.Client.RejectCloudEventsAsync(client.Options.TopicName, client.Options.SubscriptionName, A<IEnumerable<string>>._, A<CancellationToken>._)).Throws<LocalTestException>();
+
+        // Disable completion on events received to make sure we wait around and see the exception happen
+        this._eventCounter += 1;
+    }
+
+    private void GivenAcknowledgingAndReleasingFailTogether(EventPullerClient client, Exception acknowledgeException, Exception releaseException)
+    {
+        var acknowledgeCalled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseCalled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        A.CallTo(() => client.Client.AcknowledgeCloudEventsAsync(client.Options.TopicName, client.Options.SubscriptionName, A<IEnumerable<string>>._, A<CancellationToken>._))
+            .ReturnsLazily(async () =>
+            {
+                acknowledgeCalled.TrySetResult();
+                await releaseCalled.Task;
+                throw acknowledgeException;
+            });
+
+        A.CallTo(() => client.Client.ReleaseCloudEventsAsync(client.Options.TopicName, client.Options.SubscriptionName, A<IEnumerable<string>>._, A<TimeSpan>._, A<CancellationToken>._))
+            .ReturnsLazily(async () =>
+            {
+                releaseCalled.TrySetResult();
+                await acknowledgeCalled.Task;
+                throw releaseException;
+            });
 
         // Disable completion on events received to make sure we wait around and see the exception happen
         this._eventCounter += 1;

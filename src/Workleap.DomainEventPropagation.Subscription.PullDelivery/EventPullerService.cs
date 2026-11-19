@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Azure;
@@ -89,7 +90,6 @@ internal sealed class EventPullerService : BackgroundService
         private Channel<EventBundle> _releaseEventChannel = Channel.CreateBounded<EventBundle>(OutputChannelSize);
         private Channel<EventBundle> _rejectEventChannel = Channel.CreateBounded<EventBundle>(OutputChannelSize);
 
-        private int _consecutiveEventGridFailures;
         private int _handlersInProgress;
         private TaskCompletionSource _taskCompletionSource = new();
 
@@ -114,8 +114,12 @@ internal sealed class EventPullerService : BackgroundService
 
         public async Task StartReceivingEventsAsync(CancellationToken cancellationToken)
         {
+            var failureCount = 0;
+
             while (true)
             {
+                var receivingStartedAt = Stopwatch.GetTimestamp();
+
                 try
                 {
                     await this.ReceiveEventsAsync(cancellationToken).ConfigureAwait(false);
@@ -124,7 +128,8 @@ internal sealed class EventPullerService : BackgroundService
                 catch (Exception ex) when (IsEventGridUnavailable(ex) && !cancellationToken.IsCancellationRequested)
                 {
                     // An Event Grid outage must not stop the host: it would take down every other part of the application with it
-                    var failureCount = Interlocked.Increment(ref this._consecutiveEventGridFailures);
+                    // Settlement calls can keep failing while receiving succeeds, so only a session that stayed up resets the backoff
+                    failureCount = Stopwatch.GetElapsedTime(receivingStartedAt) >= MaxReconnectDelay ? 1 : failureCount + 1;
                     var reconnectDelay = GetReconnectDelay(failureCount);
 
                     this._logger.EventGridUnavailable(this._eventGridTopicSubscription.TopicName, this._eventGridTopicSubscription.SubscriptionName, failureCount, reconnectDelay, ex);
@@ -171,7 +176,16 @@ internal sealed class EventPullerService : BackgroundService
             this.CompleteEventChannels();
 
             // Since the event processing task was cancelled and the callback channels completed, all the tasks should complete shortly
-            await Task.WhenAll(eventProcessingTasks).ConfigureAwait(false);
+            var allTasks = Task.WhenAll(eventProcessingTasks);
+            try
+            {
+                await allTasks.ConfigureAwait(false);
+            }
+            catch (Exception) when (allTasks.Exception is { InnerExceptions.Count: > 1 } failures)
+            {
+                // await only surfaces the first failure, which could hide an unrelated one behind an Event Grid outage and retry it away
+                throw failures;
+            }
         }
 
         private Task ProcessEvents(CancellationToken cancellationToken)
@@ -211,7 +225,6 @@ internal sealed class EventPullerService : BackgroundService
                 }
 
                 var bundles = await this._eventGridTopicSubscription.Client.ReceiveCloudEventsAsync(this._eventGridTopicSubscription.TopicName, this._eventGridTopicSubscription.SubscriptionName, Math.Min(availableHandlers, MaxEventRequestSize), cancellationToken).ConfigureAwait(false);
-                Interlocked.Exchange(ref this._consecutiveEventGridFailures, 0);
 
                 foreach (var bundle in bundles)
                 {
