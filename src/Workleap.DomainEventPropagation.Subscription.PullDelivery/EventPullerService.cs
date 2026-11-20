@@ -1,5 +1,8 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using Azure;
+using Azure.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -70,6 +73,10 @@ internal sealed class EventPullerService : BackgroundService
         // See https://learn.microsoft.com/en-us/dotnet/api/azure.messaging.eventgrid.namespaces.eventgridclient.releasecloudeventsasync?view=azure-dotnet-preview#azure-messaging-eventgrid-namespaces-eventgridclient-releasecloudeventsasync(system-string-system-string-azure-core-requestcontent-system-nullable((system-int32))-azure-requestcontext)
         private static readonly TimeSpan[] SupportedReleaseDelays = [TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(600), TimeSpan.FromSeconds(3600)];
 
+        private static readonly TimeSpan InitialReconnectDelay = TimeSpan.FromSeconds(1);
+        private static readonly TimeSpan MaxReconnectDelay = TimeSpan.FromMinutes(1);
+        private static readonly DelayStrategy ReconnectDelayStrategy = DelayStrategy.CreateExponentialDelayStrategy(InitialReconnectDelay, MaxReconnectDelay);
+
         private const int OutputChannelSize = 5000;
         private const int MaxEventRequestSize = 100;
 
@@ -80,9 +87,10 @@ internal sealed class EventPullerService : BackgroundService
         private readonly Dictionary<int, TimeSpan>? _retryDelays;
         private readonly TimeSpan? _defaultDelay;
 
-        private readonly Channel<EventBundle> _acknowledgeEventChannel = Channel.CreateBounded<EventBundle>(OutputChannelSize);
-        private readonly Channel<EventBundle> _releaseEventChannel = Channel.CreateBounded<EventBundle>(OutputChannelSize);
-        private readonly Channel<EventBundle> _rejectEventChannel = Channel.CreateBounded<EventBundle>(OutputChannelSize);
+        // Recreated on every reconnection because a completed channel can't be reopened
+        private Channel<EventBundle> _acknowledgeEventChannel = Channel.CreateBounded<EventBundle>(OutputChannelSize);
+        private Channel<EventBundle> _releaseEventChannel = Channel.CreateBounded<EventBundle>(OutputChannelSize);
+        private Channel<EventBundle> _rejectEventChannel = Channel.CreateBounded<EventBundle>(OutputChannelSize);
 
         private int _handlersInProgress;
         private TaskCompletionSource _taskCompletionSource = new();
@@ -108,6 +116,51 @@ internal sealed class EventPullerService : BackgroundService
 
         public async Task StartReceivingEventsAsync(CancellationToken cancellationToken)
         {
+            var failureCount = 0;
+
+            while (true)
+            {
+                var receivingStartedAt = Stopwatch.GetTimestamp();
+
+                try
+                {
+                    await this.ReceiveEventsAsync(cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+                catch (Exception ex) when (IsEventGridUnavailable(ex) && !cancellationToken.IsCancellationRequested)
+                {
+                    // An Event Grid outage must not stop the host: it would take down every other part of the application with it
+                    // Settlement calls can keep failing while receiving succeeds, so only a session that stayed up resets the backoff
+                    failureCount = Stopwatch.GetElapsedTime(receivingStartedAt) >= MaxReconnectDelay ? 1 : failureCount + 1;
+                    var reconnectDelay = GetReconnectDelay(failureCount);
+
+                    this._logger.EventGridUnavailable(this._eventGridTopicSubscription.TopicName, this._eventGridTopicSubscription.SubscriptionName, failureCount, reconnectDelay, ex);
+
+                    await Task.Delay(reconnectDelay, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                    this.ResetEventChannels();
+                }
+            }
+        }
+
+        private static bool IsEventGridUnavailable(Exception ex) => ex switch
+        {
+            // 0 means no response was received. Other client errors (401, 403, 404) are configuration mistakes that must still stop the host
+            RequestFailedException { Status: 0 or 408 or 429 or >= 500 } => true,
+
+            // The Azure SDK reports a network timeout as a TaskCanceledException. The caller only retries while the host isn't stopping
+            OperationCanceledException => true,
+
+            // The Azure SDK retry policy wraps the failure of each attempt in an AggregateException
+            AggregateException aggregate => aggregate.InnerExceptions.All(IsEventGridUnavailable),
+            _ => false,
+        };
+
+        // Jittered so that every pod failing at once doesn't hit Event Grid in lockstep when it recovers
+        // The retry number is capped because the strategy computes 1 << (retryNumber - 1), which overflows after 31 failures
+        private static TimeSpan GetReconnectDelay(int failureCount) => ReconnectDelayStrategy.GetNextDelay(response: null, retryNumber: Math.Min(failureCount, 10));
+
+        private async Task ReceiveEventsAsync(CancellationToken cancellationToken)
+        {
             // Use a local cancellation token source to allow stopping the events reception/processing if a callback task crashes
             using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
@@ -127,7 +180,16 @@ internal sealed class EventPullerService : BackgroundService
             this.CompleteEventChannels();
 
             // Since the event processing task was cancelled and the callback channels completed, all the tasks should complete shortly
-            await Task.WhenAll(eventProcessingTasks).ConfigureAwait(false);
+            var allTasks = Task.WhenAll(eventProcessingTasks);
+            try
+            {
+                await allTasks.ConfigureAwait(false);
+            }
+            catch (Exception) when (allTasks.Exception is { InnerExceptions.Count: > 1 } failures)
+            {
+                // await only surfaces the first failure, which could hide an unrelated one behind an Event Grid outage and retry it away
+                throw failures;
+            }
         }
 
         private Task ProcessEvents(CancellationToken cancellationToken)
@@ -210,7 +272,10 @@ internal sealed class EventPullerService : BackgroundService
         {
             while (!cancellationToken.IsCancellationRequested && !this._acknowledgeEventChannel.Reader.Completion.IsCompleted)
             {
-                await this._acknowledgeEventChannel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false);
+                if (!await this._acknowledgeEventChannel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    return;
+                }
 
                 var lockTokens = ReadCurrentContent(this._acknowledgeEventChannel).Select(x => x.LockToken);
                 await this._eventGridTopicSubscription.Client.AcknowledgeCloudEventsAsync(this._eventGridTopicSubscription.TopicName, this._eventGridTopicSubscription.SubscriptionName, lockTokens, cancellationToken).ConfigureAwait(false);
@@ -221,7 +286,10 @@ internal sealed class EventPullerService : BackgroundService
         {
             while (!cancellationToken.IsCancellationRequested && !this._releaseEventChannel.Reader.Completion.IsCompleted)
             {
-                await this._releaseEventChannel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false);
+                if (!await this._releaseEventChannel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    return;
+                }
 
                 var eventBundlesByDelay = ReadCurrentContent(this._releaseEventChannel)
                     .GroupBy(x => this.GetReleaseDelay(x.DeliveryCount));
@@ -238,7 +306,10 @@ internal sealed class EventPullerService : BackgroundService
         {
             while (!cancellationToken.IsCancellationRequested && !this._rejectEventChannel.Reader.Completion.IsCompleted)
             {
-                await this._rejectEventChannel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false);
+                if (!await this._rejectEventChannel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    return;
+                }
 
                 var lockTokens = ReadCurrentContent(this._rejectEventChannel).Select(x => x.LockToken);
                 await this._eventGridTopicSubscription.Client.RejectCloudEventsAsync(this._eventGridTopicSubscription.TopicName, this._eventGridTopicSubscription.SubscriptionName, lockTokens, cancellationToken).ConfigureAwait(false);
@@ -250,6 +321,13 @@ internal sealed class EventPullerService : BackgroundService
             this._acknowledgeEventChannel.Writer.TryComplete();
             this._releaseEventChannel.Writer.TryComplete();
             this._rejectEventChannel.Writer.TryComplete();
+        }
+
+        private void ResetEventChannels()
+        {
+            this._acknowledgeEventChannel = Channel.CreateBounded<EventBundle>(OutputChannelSize);
+            this._releaseEventChannel = Channel.CreateBounded<EventBundle>(OutputChannelSize);
+            this._rejectEventChannel = Channel.CreateBounded<EventBundle>(OutputChannelSize);
         }
 
         private void SignalHandlerStarting()

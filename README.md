@@ -329,6 +329,12 @@ The `CloudEvents process` activity of each delivery carries two tags, so a failu
 - `cloudevents.delivery_count`: the Event Grid delivery count of the event, starting at 1.
 - `cloudevents.is_last_delivery`: `true` when the event is rejected if this delivery fails. That is the case once the delivery count exceeds `MaxRetries`, or when no handler is registered for the event.
 
+#### Event Grid outages
+
+When Event Grid can't be reached while receiving, acknowledging, releasing or rejecting events (no response, network timeout, 408, 429 or 5xx), the puller doesn't stop the host. It pulls again after a jittered delay that starts at 1 second and doubles up to 1 minute, until Event Grid is back. Other errors, such as a 401, 403 or 404 caused by a wrong configuration, still stop the host. Events whose acknowledgement was lost are redelivered by Event Grid once their lock expires.
+
+Each failed attempt logs an error `Event Grid is unavailable for topic {TopicName} on subscription {Subscription} ({ConsecutiveFailures} consecutive failures)...`. Alert on it, otherwise the application keeps serving while silently not receiving events.
+
 ## Configure the underlying Event Grid clients options
 
 You can use the [named options pattern](https://learn.microsoft.com/en-us/dotnet/core/extensions/options#named-options-support-using-iconfigurenamedoptions) to configure the behavior of the underlying Event Grid clients. For instance:
