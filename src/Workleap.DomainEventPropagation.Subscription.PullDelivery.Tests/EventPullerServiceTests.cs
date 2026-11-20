@@ -66,6 +66,24 @@ public class EventPullerServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GivenEventGridForbiddingReceiving_WhenErrorOccured_ThenBubbleUpException()
+    {
+        // Given
+        var client = this.GivenClient();
+        A.CallTo(() => client.Client.ReceiveCloudEventsAsync(client.Options.TopicName, client.Options.SubscriptionName, A<int>._, A<CancellationToken>._))
+            .Throws(new RequestFailedException(403, "Forbidden"));
+
+        // Disable completion on events received to make sure we wait around and see the exception happen
+        this._eventCounter += 1;
+
+        // When
+        var exception = await Assert.ThrowsAsync<RequestFailedException>(this.WhenRunningPullerService).WaitAsync(TimeSpan.FromSeconds(30));
+
+        // Then
+        Assert.Equal(403, exception.Status);
+    }
+
+    [Fact]
     public async Task GivenEventGridUnavailableOnAcknowledging_WhenItRecovers_ThenEventsAreReceivedAgainWithoutStoppingTheService()
     {
         // Given
@@ -277,6 +295,10 @@ public class EventPullerServiceTests : IDisposable
     public static IEnumerable<object[]> EventGridUnavailableExceptions()
     {
         yield return [new RequestFailedException("Connection refused")];
+        yield return [new RequestFailedException(503, "Service Unavailable")];
+
+        // What the Azure SDK throws once every attempt hit the network timeout
+        yield return [new AggregateException(new TaskCanceledException("The operation was cancelled because it exceeded the configured timeout"), new TaskCanceledException("The operation was cancelled because it exceeded the configured timeout"))];
         yield return [new AggregateException(new RequestFailedException("Connection refused"), new RequestFailedException("Connection refused"))];
     }
 

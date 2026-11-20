@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Azure;
+using Azure.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -74,6 +75,7 @@ internal sealed class EventPullerService : BackgroundService
 
         private static readonly TimeSpan InitialReconnectDelay = TimeSpan.FromSeconds(1);
         private static readonly TimeSpan MaxReconnectDelay = TimeSpan.FromMinutes(1);
+        private static readonly DelayStrategy ReconnectDelayStrategy = DelayStrategy.CreateExponentialDelayStrategy(InitialReconnectDelay, MaxReconnectDelay);
 
         private const int OutputChannelSize = 5000;
         private const int MaxEventRequestSize = 100;
@@ -142,18 +144,20 @@ internal sealed class EventPullerService : BackgroundService
 
         private static bool IsEventGridUnavailable(Exception ex) => ex switch
         {
-            RequestFailedException => true,
+            // 0 means no response was received. Other client errors (401, 403, 404) are configuration mistakes that must still stop the host
+            RequestFailedException { Status: 0 or 408 or 429 or >= 500 } => true,
+
+            // The Azure SDK reports a network timeout as a TaskCanceledException. The caller only retries while the host isn't stopping
+            OperationCanceledException => true,
 
             // The Azure SDK retry policy wraps the failure of each attempt in an AggregateException
             AggregateException aggregate => aggregate.InnerExceptions.All(IsEventGridUnavailable),
             _ => false,
         };
 
-        private static TimeSpan GetReconnectDelay(int failureCount)
-        {
-            var delay = InitialReconnectDelay * Math.Pow(2, Math.Min(failureCount - 1, 10));
-            return delay < MaxReconnectDelay ? delay : MaxReconnectDelay;
-        }
+        // Jittered so that every pod failing at once doesn't hit Event Grid in lockstep when it recovers
+        // The retry number is capped because the strategy computes 1 << (retryNumber - 1), which overflows after 31 failures
+        private static TimeSpan GetReconnectDelay(int failureCount) => ReconnectDelayStrategy.GetNextDelay(response: null, retryNumber: Math.Min(failureCount, 10));
 
         private async Task ReceiveEventsAsync(CancellationToken cancellationToken)
         {
@@ -268,7 +272,10 @@ internal sealed class EventPullerService : BackgroundService
         {
             while (!cancellationToken.IsCancellationRequested && !this._acknowledgeEventChannel.Reader.Completion.IsCompleted)
             {
-                await this._acknowledgeEventChannel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false);
+                if (!await this._acknowledgeEventChannel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    return;
+                }
 
                 var lockTokens = ReadCurrentContent(this._acknowledgeEventChannel).Select(x => x.LockToken);
                 await this._eventGridTopicSubscription.Client.AcknowledgeCloudEventsAsync(this._eventGridTopicSubscription.TopicName, this._eventGridTopicSubscription.SubscriptionName, lockTokens, cancellationToken).ConfigureAwait(false);
@@ -279,7 +286,10 @@ internal sealed class EventPullerService : BackgroundService
         {
             while (!cancellationToken.IsCancellationRequested && !this._releaseEventChannel.Reader.Completion.IsCompleted)
             {
-                await this._releaseEventChannel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false);
+                if (!await this._releaseEventChannel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    return;
+                }
 
                 var eventBundlesByDelay = ReadCurrentContent(this._releaseEventChannel)
                     .GroupBy(x => this.GetReleaseDelay(x.DeliveryCount));
@@ -296,7 +306,10 @@ internal sealed class EventPullerService : BackgroundService
         {
             while (!cancellationToken.IsCancellationRequested && !this._rejectEventChannel.Reader.Completion.IsCompleted)
             {
-                await this._rejectEventChannel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false);
+                if (!await this._rejectEventChannel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    return;
+                }
 
                 var lockTokens = ReadCurrentContent(this._rejectEventChannel).Select(x => x.LockToken);
                 await this._eventGridTopicSubscription.Client.RejectCloudEventsAsync(this._eventGridTopicSubscription.TopicName, this._eventGridTopicSubscription.SubscriptionName, lockTokens, cancellationToken).ConfigureAwait(false);
